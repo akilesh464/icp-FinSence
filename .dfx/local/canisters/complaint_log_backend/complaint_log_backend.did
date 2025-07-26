@@ -1,0 +1,5 @@
+service : {
+  addComplaint: (text, text) -> (bool);
+  getComplaintCount: () -> (int) query;
+  getData: () -> (vec vec text) query;
+}

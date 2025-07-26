@@ -1,0 +1,26 @@
+{
+  "canisters": {
+    "complaint_log_backend": {
+      "main": "src/complaint_log_backend/main.mo",
+      "type": "motoko"
+    },
+    "complaint_log_frontend": {
+      "dependencies": [
+        "complaint_log_backend"
+      ],
+      "source": [
+        "src/complaint_log_frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "complaint_log_frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}
