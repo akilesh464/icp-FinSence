@@ -1,3 +1,4 @@
+// index.jsx for tracker
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import EmotionalHeader from '../../components/ui/EmotionalHeader';
