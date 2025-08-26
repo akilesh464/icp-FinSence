@@ -1,3 +1,4 @@
+//this is for AppIcon
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
 import { HelpCircle } from 'lucide-react';
