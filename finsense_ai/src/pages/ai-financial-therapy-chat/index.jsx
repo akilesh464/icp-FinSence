@@ -1,3 +1,4 @@
+// this is index.jsx for therapy chat
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { chatService } from "../../services/ChatService";
