@@ -254,8 +254,9 @@ const MessageInput = ({
 };
 
 export default MessageInput;
-</div>
-  );
-};
-
-export default MessageInput;
+ className={`
+            relative border rounded-2xl transition-all duration-200
+            ${getEmotionalStyling()}
+            ${isTyping ? 'opacity-50 pointer-events-none' : ''}
+          `}
+        >
