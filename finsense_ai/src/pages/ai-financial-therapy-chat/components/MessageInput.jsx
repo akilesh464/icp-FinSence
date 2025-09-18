@@ -254,3 +254,8 @@ const MessageInput = ({
 };
 
 export default MessageInput;
+</div>
+  );
+};
+
+export default MessageInput;
