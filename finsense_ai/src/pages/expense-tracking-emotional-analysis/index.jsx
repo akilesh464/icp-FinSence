@@ -146,6 +146,13 @@ const ExpenseTrackingEmotionalAnalysis = () => {
     }, 1000);
   };
 
+   const handleCrisisEvent = () => setShowCrisisOverlay(true);
+    document.addEventListener('triggerCrisisHelp', handleCrisisEvent);
+    
+    return () => {
+      document.removeEventListener('triggerCrisisHelp', handleCrisisEvent);
+    };
+
   const handleAddExpense = async (expenseData) => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
