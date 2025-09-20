@@ -88,6 +88,12 @@ const InvestmentPortfolioEmotionalMarketTiming = () => {
     return culturalContext === 'hindi' ?'AI-संचालित निवेश पोर्टफोलियो प्रबंधन भावनात्मक बुद्धिमत्ता और व्यवहारिक वित्त मनोविज्ञान के साथ। स्मार्ट मार्केट टाइमिंग और तनाव-मुक्त निवेश निर्णय।' :'AI-powered investment portfolio management with emotional intelligence and behavioral finance psychology. Smart market timing and stress-free investment decisions.';
   };
 
+   if (day >= 1 && day <= 5 && hour >= 9 && hour < 16) {
+      setMarketStatus('open');
+    } else {
+      setMarketStatus('closed');
+    }
+
   const viewOptions = [
     { 
       id: 'overview', 
