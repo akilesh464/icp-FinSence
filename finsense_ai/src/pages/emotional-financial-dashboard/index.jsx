@@ -111,6 +111,14 @@ const EmotionalFinancialDashboard = () => {
     );
   }
 
+   if (hour >= 9 && hour <= 11) {
+        newState = 'positive'; // Morning productivity
+      } else if (hour >= 12 && hour <= 14) {
+        newState = 'stressed'; // Lunch time stress
+      } else if (hour >= 18 && hour <= 20) {
+        newState = 'calm'; // Evening relaxation
+      }
+
   return (
     <div className={`min-h-screen bg-background transition-emotional ${emotionalState}-state`}>
       {/* Global Header */}
