@@ -110,6 +110,11 @@ const CulturalFinancialPlanning = () => {
     }
   ];
 
+   const handleLanguageChange = (newContext) => {
+    setCulturalContext(newContext);
+    localStorage.setItem('culturalContext', newContext);
+  };
+
   // Mock data for joint family
   const getFamilyData = () => ({
     totalIncome: 450000,
