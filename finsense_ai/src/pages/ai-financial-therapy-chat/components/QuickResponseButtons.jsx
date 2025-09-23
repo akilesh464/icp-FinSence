@@ -275,13 +275,6 @@ const QuickResponseButtons = ({
         </div>
       )}
 
-       <div className={`space-y-4 ${className}`}>
-      {/* Emergency Responses */}
-      {emotionalState === 'stressed' || emotionalState === 'anxious' ? (
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-foreground">
-            {culturalContext === 'hindi' ? 'तत्काल सहायता:' : 'Immediate Support:'}
-
       {/* Additional Support Options */}
       <div className="pt-2 border-t border-border/20">
         <div className="flex flex-wrap gap-2">

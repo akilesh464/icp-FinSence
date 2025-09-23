@@ -34,6 +34,16 @@ type ChatInteraction =
    userMessage: text;
  };
 
+type Income = 
+ record {
+   amount: nat;
+   date: text;
+   description: opt text;
+   emotion: text;
+   id: nat;
+   source: text;
+ };
+
 type UserProfile = 
  record {
    country: opt text;
@@ -52,6 +62,7 @@ type ExportData =
    chatInteractions: vec ChatInteraction;
    expenses: vec Expense;
    holdings: vec Holding;
+   incomes: vec Income;
    messages: vec Message;
    profile: opt UserProfile;
  };
@@ -61,12 +72,14 @@ type CanisterInfo =
    totalChatInteractions: nat;
    totalExpenses: nat;
    totalHoldings: nat;
+   totalIncomes: nat;
    totalMessages: nat;
  };
 
 service : {
   addExpense: (text, nat, text, text) -> (Expense);
   addHolding: (text, nat, nat) -> (Holding);
+  addIncome: (nat, text, opt text, text, text) -> (Income);
   addMessage: (text, int) -> (Message);
   addBotMessage: (text, text) -> (Message);
   deleteUserData: () -> (bool);
@@ -75,11 +88,16 @@ service : {
   getChatInteractions: () -> (vec ChatInteraction) query;
   getExpenses: () -> (vec Expense) query;
   getHoldings: () -> (vec Holding) query;
+  getIncomes: () -> (vec Income) query;
   getMessages: () -> (vec Message) query;
   getUserProfile: () -> (opt UserProfile) query;
   removeExpense: (nat) -> (bool);
   removeHolding: (nat) -> (bool);
+  removeIncome: (nat) -> (bool);
   storeChatInteraction: (text, text, text, vec text) -> (ChatInteraction);
   updateUserProfile: (opt text, opt nat, opt nat, opt text, opt nat, opt text, opt text, opt text, opt vec text) -> (UserProfile);
   whoami: () -> (principal) query;
+  greet: (text) -> (text) query;
+  getCurrentTime: () -> (int);
+  getAppInfo: () -> (record {name:text; version:text}) query;
 }

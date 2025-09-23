@@ -33,7 +33,7 @@ const QuickActionButtons = ({
       },
       {
         id: 'ai-therapy',
-        title: culturalContext === 'hindi' ? 'AI थेरेपी चैट' : 'AI Therapy Chat',
+        title: culturalContext === 'hindi' ? 'AI थेरेपी चैट' : 'AI Financial Therapy Chat',
         description: culturalContext === 'hindi' ? 'वित्तीय सलाह और मानसिक सहायता' : 'Financial counseling & support',
         icon: 'MessageCircleHeart',
         color: 'text-green-500',
@@ -44,8 +44,8 @@ const QuickActionButtons = ({
       },
       {
         id: 'goal-setting',
-        title: culturalContext === 'hindi' ? 'लक्ष्य निर्धारण' : 'Set Goals',
-        description: culturalContext === 'hindi' ? 'वित्तीय लक्ष्य बनाएं' : 'Create financial targets',
+        title: culturalContext === 'hindi' ? 'लक्ष्य निर्धारण' : ' Cultural financial preferences',
+        description: culturalContext === 'hindi' ? 'वित्तीय लक्ष्य बनाएं' : 'Create cultural financial targets',
         icon: 'Target',
         color: 'text-purple-500',
         bgColor: 'bg-purple-500/10',

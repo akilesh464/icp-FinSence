@@ -2,7 +2,7 @@
   "name": "finsense-ai",
   "version": "0.1.0",
   "private": true,
-  "newCritical": {
+  "rocketCritical": {
     "dependencies": [
       "@dhiwise/component-tagger",
       "react",
@@ -24,6 +24,7 @@
       "build",
       "serve"
     ],
+    "warning": "🚨 CRITICAL: DO NOT REMOVE OR MODIFY ABOVE DEPENDENCIES - Required for app functionality"
   },
   "dependencies": {
     "@dhiwise/component-tagger": "^1.0.10",
@@ -34,12 +35,15 @@
     "@testing-library/react": "^11.2.7",
     "@testing-library/user-event": "^12.8.3",
     "axios": "^1.8.4",
+    "chmod": "^0.2.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "d3": "^7.9.0",
     "date-fns": "^4.1.0",
     "dotenv": "^16.6.1",
     "framer-motion": "^10.16.4",
+    "jspdf": "^3.0.3",
+    "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.484.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -52,12 +56,21 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "tailwindcss-elevation": "^2.0.0",
-    "tailwindcss-fluid-type": "^2.0.7"
+    "tailwindcss-fluid-type": "^2.0.7",
+    "yahoo-finance2": "^2.13.3"
   },
   "scripts": {
     "start": "vite",
     "build": "vite build --sourcemap",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "deploy:local": "powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1",
+    "deploy:ic": "npm run build && dfx deploy --network ic",
+    "dfx:start": "dfx start --background",
+    "dfx:stop": "dfx stop",
+    "dfx:deploy": "dfx deploy",
+    "dfx:deploy:ic": "dfx deploy --network ic",
+    "serve:dev": "node scripts/serve-dev.js",
+    "dev": "npm run build && npm run serve:dev"
   },
   "eslintConfig": {
     "extends": [
@@ -88,6 +101,7 @@
     "@tailwindcss/typography": "^0.5.16",
     "@vitejs/plugin-react": "4.3.4",
     "autoprefixer": "10.4.2",
+    "express": "^5.1.0",
     "postcss": "8.4.8",
     "tailwindcss": "3.4.6",
     "vite": "5.0.0",

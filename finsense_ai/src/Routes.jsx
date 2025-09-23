@@ -9,6 +9,9 @@ import EmotionalFinancialDashboard from './pages/emotional-financial-dashboard';
 import AIFinancialTherapyChat from './pages/ai-financial-therapy-chat';
 import CulturalFinancialPlanning from './pages/cultural-financial-planning';
 import ProfileCulturalPreferences from './pages/profile-cultural-preferences';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
+import TokenRedemption from './pages/tokens/TokenRedemption';
+import ReferralOffers from './pages/referral/ReferralOffers';
 
 const Routes = () => {
   return (
@@ -24,6 +27,9 @@ const Routes = () => {
         <Route path="/ai-financial-therapy-chat" element={<AIFinancialTherapyChat />} />
         <Route path="/cultural-financial-planning" element={<CulturalFinancialPlanning />} />
         <Route path="/profile-cultural-preferences" element={<ProfileCulturalPreferences />} />
+        <Route path="/admin/analytics" element={<AdminAnalytics />} />
+        <Route path="/tokens/redeem" element={<TokenRedemption />} />
+        <Route path="/referral/offers" element={<ReferralOffers />} />
         <Route path="*" element={<NotFound />} />
       </RouterRoutes>
       </ErrorBoundary>
@@ -32,3 +38,4 @@ const Routes = () => {
 };
 
 export default Routes;
+

@@ -249,40 +249,9 @@ const CulturalContextIndicator = ({
             )}
 
             {/* Upcoming Events */}
-            {upcomingEvents?.length > 0 && (
-              <div className="mb-4">
-                <h3 className="text-sm font-medium text-foreground mb-2">
-                  {culturalContext === 'hindi' ? 'आगामी त्योहार:' : 'Upcoming Festivals:'}
-                </h3>
-                <div className="space-y-2">
-                  {upcomingEvents?.map((event) => (
-                    <div key={event?.id} className="flex items-center space-x-3 p-2 rounded-md bg-muted/30">
-                      <Icon name={event?.icon} size={16} className={event?.color} />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-foreground">{event?.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(2024, event.month, event.date)?.toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            
 
-            {/* Cultural Financial Wisdom */}
-            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-              <div className="flex items-center space-x-2 mb-2">
-                <Icon name="BookOpen" size={16} className="text-primary" />
-                <h4 className="text-sm font-medium text-primary">
-                  {culturalContext === 'hindi' ? 'आज का वित्तीय ज्ञान' : 'Today\'s Financial Wisdom'}
-                </h4>
-              </div>
-              <p className="text-xs text-primary/80">
-                {culturalContext === 'hindi' ?'"धन का सदुपयोग ही सच्ची संपत्ति है। बचत और निवेश के साथ अपना भविष्य सुरक्षित करें।"' : '"The proper use of wealth is true prosperity. Secure your future with savings and investments."'
-                }
-              </p>
-            </div>
+           
           </div>
         </div>
       )}

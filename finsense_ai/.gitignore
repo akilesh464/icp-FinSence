@@ -6,3 +6,8 @@ package-lock.json
 .vscode/
 .idea/
 vite.config.*s.*
+
+# Internet Computer
+.dfx/
+canister_ids.json
+.canister_id

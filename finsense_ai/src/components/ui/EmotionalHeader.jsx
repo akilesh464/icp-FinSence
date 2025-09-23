@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Icon from "../AppIcon";
 import Button from "./Button";
 import ICPAuthButton from "./ICPAuthButton"; // 👈 add
+import { useICP } from "../../ic/useICP";
 
 const EmotionalHeader = ({
   emotionalState = "calm",
@@ -10,6 +11,7 @@ const EmotionalHeader = ({
   onCrisisHelp,
   className = "",
 }) => {
+  const { authed, login, logout } = useICP();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [activeNavItem, setActiveNavItem] = useState(
@@ -207,7 +209,7 @@ const EmotionalHeader = ({
           </Button>
 
           {/* ICP Login Button */}
-          <ICPAuthButton />
+          <ICPAuthButton onLogin={login} onLogout={logout} isAuthenticated={authed} />
 
           {/* Mobile Menu Toggle */}
           <Button

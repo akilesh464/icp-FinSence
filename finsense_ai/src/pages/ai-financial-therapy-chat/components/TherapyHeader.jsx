@@ -137,15 +137,6 @@ const TherapyHeader = ({
             </span>
           </Button>
 
-           <div className="hidden md:flex items-center space-x-4">
-          {/* Emotional State Indicator */}
-          <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-muted/50">
-            <Icon 
-              name={getEmotionalStateIcon()} 
-              size={16} 
-              className={getEmotionalStateColor()} 
-            />
-
           {/* Crisis Help Button */}
           <Button
             variant="outline"

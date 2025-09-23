@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import Icon from '../../../components/AppIcon';
-import ICPAuthButton from '../../../components/ui/ICPAuthButton'; // 👈 adjust if located elsewhere
+import ICPAuthButton from '../../../components/ui/ICPAuthButton';
+import { investmentService } from '../../../services/InvestmentService';
+import { chatService } from '../../../services/ChatService';
+import { financialDataService } from '../../../services/FinancialDataService';
+import { useICP } from '../../../ic/useICP';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import NetWorthDetailModal from '../../../components/modals/NetWorthDetailModal';
 
 const NetWorthSummary = ({ 
   emotionalState = 'calm',
   culturalContext = 'default',
+  userProfile = null,
+  refreshTrigger = 0,
+  transactionRefreshTrigger = 0,
   className = '' 
 }) => {
+  const { ready, authed, login, logout } = useICP();
   const [netWorthData, setNetWorthData] = useState({
     current: 0,
     change: 0,
@@ -18,53 +29,135 @@ const NetWorthSummary = ({
   const [chartData, setChartData] = useState([]);
   const [timeframe, setTimeframe] = useState('6M');
   const [isLoading, setIsLoading] = useState(true);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      const mockData = {
-        current: 1247500,
-        change: 23750,
-        changePercent: 1.94,
-        assets: 1580000,
-        liabilities: 332500
-      };
-      
-      setNetWorthData(mockData);
-      
-      const chartDataMap = {
-        '1M': [
-          { date: 'Aug 1', value: 1223750 },
-          { date: 'Aug 8', value: 1235000 },
-          { date: 'Aug 15', value: 1247500 }
-        ],
-        '3M': [
-          { date: 'Jun', value: 1180000 },
-          { date: 'Jul', value: 1210000 },
-          { date: 'Aug', value: 1247500 }
-        ],
-        '6M': [
-          { date: 'Mar', value: 1120000 },
-          { date: 'Apr', value: 1145000 },
-          { date: 'May', value: 1165000 },
-          { date: 'Jun', value: 1180000 },
-          { date: 'Jul', value: 1210000 },
-          { date: 'Aug', value: 1247500 }
-        ],
-        '1Y': [
-          { date: 'Aug 23', value: 980000 },
-          { date: 'Nov 23', value: 1020000 },
-          { date: 'Feb 24', value: 1080000 },
-          { date: 'May 24', value: 1165000 },
-          { date: 'Aug 24', value: 1247500 }
-        ]
-      };
-      
-      setChartData(chartDataMap?.[timeframe]);
-      setIsLoading(false);
-    }, 800);
-  }, [timeframe]);
+    (async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get financial data from service (includes onboarding base + transaction changes)
+        const financialData = financialDataService.getFinancialData();
+        console.log('Financial data from service:', financialData);
+        
+        // Check if onboarding data exists
+        const hasOnboarding = financialDataService.hasOnboardingData();
+        const onboardingValues = financialDataService.getOnboardingValues();
+        console.log('Onboarding check:', { hasOnboarding, onboardingValues });
+        
+        // The financialData should include onboarding base + transaction changes
+        let totalAssets = financialData.totalAssets;
+        let totalLiabilities = financialData.totalLiabilities;
+        
+        // Fallback: If financial data doesn't have onboarding values, use them directly
+        if (hasOnboarding && (totalAssets === 0 || totalLiabilities === 0)) {
+          console.log('Using onboarding values as fallback');
+          totalAssets = onboardingValues.savings;
+          totalLiabilities = onboardingValues.debt;
+        }
+        
+        console.log('Using financial data totals:', {
+          totalAssets,
+          totalLiabilities,
+          hasOnboarding,
+          onboardingValues,
+          financialDataAssets: financialData.totalAssets,
+          financialDataLiabilities: financialData.totalLiabilities
+        });
+        
+        // Get holdings data with error handling (for additional assets)
+        let holdings = [];
+        try {
+          holdings = await investmentService.getHoldings();
+          console.log('Holdings loaded successfully:', holdings);
+        } catch (error) {
+          console.warn('Failed to load holdings, using empty array:', error);
+          holdings = [];
+        }
+        
+        // Add holdings to total assets
+        const holdingsValue = holdings.reduce((sum, h) => sum + Number(h.shares) * Number(h.avgPrice), 0);
+        console.log('Holdings value being added:', holdingsValue);
+        totalAssets += holdingsValue;
+        
+        console.log('Final calculation:', {
+          baseAssets: totalAssets - holdingsValue,
+          holdingsValue,
+          totalAssets,
+          totalLiabilities
+        });
+        
+        // Calculate net worth
+        const currentNetWorth = totalAssets - totalLiabilities;
+        
+        // Calculate change from previous period (simplified)
+        const prevNetWorth = currentNetWorth * 0.98; // Simulate 2% growth
+        const change = currentNetWorth - prevNetWorth;
+        const changePercent = prevNetWorth > 0 ? (change / prevNetWorth) * 100 : 0;
+        
+        setNetWorthData({ 
+          current: Math.max(0, currentNetWorth), 
+          change: change, 
+          changePercent: changePercent, 
+          assets: totalAssets, 
+          liabilities: totalLiabilities 
+        });
+
+        // Get real-time chart data from FinancialDataService
+        const historyData = financialDataService.getNetWorthHistory(timeframe);
+        
+        if (historyData.length > 0) {
+          // Use real data if available
+          const series = historyData.map(item => ({
+            date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            value: item.netWorth
+          }));
+          setChartData(series);
+        } else {
+          // Create chart starting from current net worth
+          const labels = timeframe === '1M' ? ['W1', 'W2', 'W3', 'W4']
+            : timeframe === '3M' ? ['M1','M2','M3']
+            : timeframe === '6M' ? ['M1','M2','M3','M4','M5','M6']
+            : ['Q1','Q2','Q3','Q4'];
+          
+          const series = labels.map((label, idx) => {
+            const progress = idx / (labels.length - 1);
+            const variation = 0.05; // Reduced variation for more realistic chart
+            const baseValue = currentNetWorth * (0.95 + progress * 0.1); // Start at 95%, end at 105%
+            const randomVariation = (Math.random() - 0.5) * variation * baseValue;
+            return { 
+              date: label, 
+              value: Math.max(0, Math.round(baseValue + randomVariation)) 
+            };
+          });
+          setChartData(series);
+        }
+        
+        console.log('Updated net worth data:', {
+          totalAssets,
+          totalLiabilities,
+          currentNetWorth,
+          change,
+          changePercent,
+          hasOnboarding
+        });
+        
+      } catch (error) {
+        console.error('Error in NetWorthSummary useEffect:', error);
+        // Set default values on error
+        setNetWorthData({
+          current: 0,
+          change: 0,
+          changePercent: 0,
+          assets: 0,
+          liabilities: 0
+        });
+        setChartData([]);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [timeframe, userProfile, refreshTrigger, transactionRefreshTrigger]);
 
   const formatCurrency = (amount) => {
     if (culturalContext === 'hindi') {
@@ -111,6 +204,86 @@ const NetWorthSummary = ({
     return null;
   };
 
+  // Add this function to prepare breakdown data
+  const getNetWorthBreakdown = () => {
+    return [
+      { category: culturalContext === 'hindi' ? 'बैंक खाते' : 'Bank Accounts', amount: netWorthData.assets * 0.3 },
+      { category: culturalContext === 'hindi' ? 'निवेश' : 'Investments', amount: netWorthData.assets * 0.4 },
+      { category: culturalContext === 'hindi' ? 'संपत्ति' : 'Property', amount: netWorthData.assets * 0.3 },
+      { category: culturalContext === 'hindi' ? 'कर्ज' : 'Loans', amount: -netWorthData.liabilities * 0.7 },
+      { category: culturalContext === 'hindi' ? 'क्रेडिट कार्ड' : 'Credit Cards', amount: -netWorthData.liabilities * 0.3 },
+    ];
+  };
+
+  // Add export function
+  const handleExportReport = (format = 'pdf') => {
+    if (format === 'pdf') {
+      const doc = new jsPDF();
+      
+      // Add header
+      doc.setFontSize(20);
+      doc.text(culturalContext === 'hindi' ? 'नेट वर्थ रिपोर्ट' : 'Net Worth Report', 20, 20);
+      
+      // Add date
+      doc.setFontSize(12);
+      doc.text(new Date().toLocaleDateString(), 20, 30);
+      
+      // Add summary
+      doc.setFontSize(14);
+      const summaryData = [
+        [culturalContext === 'hindi' ? 'कुल संपत्ति' : 'Total Assets', formatFullCurrency(netWorthData.assets)],
+        [culturalContext === 'hindi' ? 'कुल देनदारियां' : 'Total Liabilities', formatFullCurrency(netWorthData.liabilities)],
+        [culturalContext === 'hindi' ? 'नेट वर्थ' : 'Net Worth', formatFullCurrency(netWorthData.current)]
+      ];
+      
+      doc.autoTable({
+        startY: 40,
+        head: [[
+          culturalContext === 'hindi' ? 'विवरण' : 'Description',
+          culturalContext === 'hindi' ? 'राशि' : 'Amount'
+        ]],
+        body: summaryData
+      });
+      
+      // Add breakdown
+      const breakdownData = getNetWorthBreakdown().map(item => [
+        item.category,
+        formatFullCurrency(item.amount)
+      ]);
+      
+      doc.autoTable({
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [[
+          culturalContext === 'hindi' ? 'श्रेणी' : 'Category',
+          culturalContext === 'hindi' ? 'राशि' : 'Amount'
+        ]],
+        body: breakdownData
+      });
+      
+      doc.save('net-worth-report.pdf');
+    } else if (format === 'csv') {
+      const rows = [
+        ['Category', 'Amount'],
+        ['Total Assets', netWorthData.assets],
+        ['Total Liabilities', netWorthData.liabilities],
+        ['Net Worth', netWorthData.current],
+        [''],
+        ['Breakdown'],
+        ...getNetWorthBreakdown().map(item => [item.category, item.amount])
+      ];
+      
+      const csvContent = "data:text/csv;charset=utf-8," 
+        + rows.map(row => row.join(',')).join('\n');
+      
+      const link = document.createElement('a');
+      link.setAttribute('href', encodeURI(csvContent));
+      link.setAttribute('download', 'net-worth-report.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className={`glass-card rounded-2xl p-6 ${className}`}>
@@ -118,6 +291,40 @@ const NetWorthSummary = ({
           <div className="h-6 bg-muted rounded w-1/2" />
           <div className="h-8 bg-muted rounded w-3/4" />
           <div className="h-32 bg-muted rounded" />
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if onboarding hasn't been completed
+  if (!financialDataService.hasOnboardingData()) {
+    // Clear any existing financial data to prevent showing old values
+    const financialData = financialDataService.getFinancialData();
+    if (financialData.totalAssets > 0 || financialData.totalLiabilities > 0) {
+      console.log('Clearing existing financial data as onboarding not completed');
+      financialDataService.resetData();
+    }
+    
+    return (
+      <div className={`glass-card rounded-2xl p-6 ${className}`}>
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 bg-muted/20 rounded-full flex items-center justify-center mx-auto">
+            <Icon name="PieChart" size={32} className="text-muted-foreground" />
+          </div>
+          <div>
+            <h3 className="text-lg font-medium text-foreground">
+              {culturalContext === 'hindi' ? 'कुल संपत्ति' : 'Net Worth'}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {culturalContext === 'hindi' 
+                ? 'ऑनबोर्डिंग पूरा करने के बाद यहां आपकी वित्तीय स्थिति दिखेगी'
+                : 'Your financial position will appear here after completing onboarding'
+              }
+            </p>
+          </div>
+          <div className="text-2xl font-bold text-muted-foreground">
+            {culturalContext === 'hindi' ? '₹0' : '₹0'}
+          </div>
         </div>
       </div>
     );
@@ -132,12 +339,22 @@ const NetWorthSummary = ({
             {culturalContext === 'hindi' ? 'कुल संपत्ति' : 'Net Worth'}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {culturalContext === 'hindi' ? 'आपकी वित्तीय स्थिति' : 'Your Financial Position'}
+            {userProfile?.name 
+              ? (culturalContext === 'hindi' 
+                ? `${userProfile.name} की वित्तीय स्थिति` 
+                : `${userProfile.name}'s Financial Position`)
+              : (culturalContext === 'hindi' ? 'आपकी वित्तीय स्थिति' : 'Your Financial Position')
+            }
           </p>
         </div>
 
-        {/* 👇 ICP Login/Logout button here */}
-        <ICPAuthButton />
+        {/* ICP Login/Logout button */}
+        <ICPAuthButton 
+          isAuthenticated={authed}
+          onLogin={login}
+          onLogout={logout}
+          culturalContext={culturalContext}
+        />
       </div>
 
       {/* Timeframe Selector */}
@@ -244,20 +461,45 @@ const NetWorthSummary = ({
 
       {/* Quick Actions */}
       <div className="mt-6 flex items-center justify-between pt-4 border-t border-border/20">
-        <button className="flex items-center space-x-2 text-sm text-muted-foreground hover:text-primary transition-ui">
+        <button 
+          onClick={() => setShowDetailModal(true)}
+          className="flex items-center space-x-2 text-sm text-muted-foreground hover:text-primary transition-ui"
+        >
           <Icon name="PieChart" size={16} />
           <span>
             {culturalContext === 'hindi' ? 'विस्तृत विश्लेषण' : 'Detailed Breakdown'}
           </span>
         </button>
         
-        <button className="flex items-center space-x-2 text-sm text-muted-foreground hover:text-primary transition-ui">
-          <Icon name="Download" size={16} />
-          <span>
-            {culturalContext === 'hindi' ? 'रिपोर्ट डाउनलोड' : 'Export Report'}
-          </span>
-        </button>
+        <div className="flex items-center space-x-2">
+          <button 
+            onClick={() => handleExportReport('csv')}
+            className="flex items-center space-x-2 text-sm text-muted-foreground hover:text-primary transition-ui"
+          >
+            <Icon name="FileText" size={16} />
+            <span>CSV</span>
+          </button>
+          
+          <button 
+            onClick={() => handleExportReport('pdf')}
+            className="flex items-center space-x-2 text-sm text-muted-foreground hover:text-primary transition-ui"
+          >
+            <Icon name="Download" size={16} />
+            <span>PDF</span>
+          </button>
+        </div>
       </div>
+
+      {/* Detail Modal */}
+      <NetWorthDetailModal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        data={{
+          ...netWorthData,
+          breakdown: getNetWorthBreakdown()
+        }}
+        culturalContext={culturalContext}
+      />
     </div>
   );
 };

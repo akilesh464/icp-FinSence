@@ -6,6 +6,9 @@ const ExpenseTimeline = ({
   expenses = [], 
   culturalContext = 'default',
   onExpenseClick,
+  onDeleteExpense,
+  onEditExpense,
+  onDuplicateExpense,
   className = '' 
 }) => {
   const [filteredExpenses, setFilteredExpenses] = useState([]);
@@ -322,17 +325,61 @@ const ExpenseTimeline = ({
                     </div>
 
                     {/* Action Menu */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e?.stopPropagation();
-                        // Handle expense actions
-                      }}
-                      iconName="MoreHorizontal"
-                      iconSize={16}
-                      className="text-muted-foreground hover:text-foreground"
-                    />
+                    <div className="flex items-center space-x-1">
+                      {onEditExpense && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e?.stopPropagation();
+                            onEditExpense(expense?.id);
+                          }}
+                          iconName="Edit"
+                          iconSize={14}
+                          className="text-primary/70 hover:text-primary hover:bg-primary/10"
+                          title={culturalContext === 'hindi' ? 'खर्च संपादित करें' : 'Edit expense'}
+                        />
+                      )}
+                      {onDuplicateExpense && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e?.stopPropagation();
+                            onDuplicateExpense(expense?.id);
+                          }}
+                          iconName="Copy"
+                          iconSize={14}
+                          className="text-secondary/70 hover:text-secondary hover:bg-secondary/10"
+                          title={culturalContext === 'hindi' ? 'खर्च डुप्लिकेट करें' : 'Duplicate expense'}
+                        />
+                      )}
+                      {onDeleteExpense && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e?.stopPropagation();
+                            onDeleteExpense(expense?.id);
+                          }}
+                          iconName="Trash2"
+                          iconSize={14}
+                          className="text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                          title={culturalContext === 'hindi' ? 'खर्च मिटाएं' : 'Delete expense'}
+                        />
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e?.stopPropagation();
+                          // Handle other expense actions
+                        }}
+                        iconName="MoreHorizontal"
+                        iconSize={16}
+                        className="text-muted-foreground hover:text-foreground"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

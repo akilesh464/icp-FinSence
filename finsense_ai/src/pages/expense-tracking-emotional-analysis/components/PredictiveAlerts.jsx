@@ -36,6 +36,29 @@ const PredictiveAlerts = ({
         ['stressed', 'anxious', 'sad', 'angry']?.includes(expense?.emotion)
       );
 
+      // Immediate red alert for any recent negative-emotion expense (last 24h)
+      const recentNegative = recentExpenses?.some(expense => {
+        const neg = ['stressed', 'anxious', 'sad', 'angry'];
+        const isNeg = neg.includes(expense?.emotion);
+        const hoursAgo = (now - new Date(expense.timestamp)) / (1000 * 60 * 60);
+        return isNeg && hoursAgo <= 24;
+      });
+      if (recentNegative) {
+        generatedAlerts?.push({
+          id: 'recent_negative_expense',
+          type: 'warning',
+          priority: 'high',
+          title: culturalContext === 'hindi' ? 'हालिया तनावपूर्ण खर्च' : 'Recent Stressful Spending',
+          description: culturalContext === 'hindi'
+            ? 'पिछले 24 घंटों में नकारात्मक भावना से जुड़ा एक खर्च जोड़ा गया है।'
+            : 'A spending with a negative emotion was added in the last 24 hours.',
+          suggestion: culturalContext === 'hindi' ? 'थोड़ा विराम लें और कारण का मूल्यांकन करें।' : 'Pause and reflect on the trigger before more spending.',
+          icon: 'AlertTriangle',
+          actionLabel: culturalContext === 'hindi' ? 'सांस लेने का अभ्यास' : 'Breathing Exercise',
+          actionType: 'breathing'
+        });
+      }
+
       if (emotionalSpending?.length >= 3) {
         generatedAlerts?.push({
           id: 'emotional_pattern',

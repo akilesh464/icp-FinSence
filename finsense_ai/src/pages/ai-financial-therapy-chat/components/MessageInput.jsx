@@ -143,13 +143,6 @@ const MessageInput = ({
                 className="text-error"
               />
             </div>
-
-            className={`
-            relative border rounded-2xl transition-all duration-200
-            ${getEmotionalStyling()}
-            ${isTyping ? 'opacity-50 pointer-events-none' : ''}
-          `}
-        >
             
             {/* Audio Level Visualization */}
             <div className="flex items-center space-x-1 mt-2">

@@ -1,6 +1,7 @@
 class GeminiService {
   constructor() {
-    this.apiKey = 'AIzaSyCYGxl50a3-H2Uj_MrM_5fe9YkGqXlS-4g'; // Replace with your actual API key
+    // Use Vite's env at build time
+    this.apiKey = (import.meta && import.meta.env && (import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY)) || '';
     this.apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
   }
 
@@ -71,9 +72,13 @@ Respond with only the emotion word:`;
   }
 
   // Generate comprehensive financial advice using Gemini
-  async generateFinancialAdvice(userMessage, userProfile, emotion, entities) {
+  async generateFinancialAdvice(userMessage, userProfile, emotion, entities, history = []) {
     try {
-      const prompt = this.buildAdvicePrompt(userMessage, userProfile, emotion, entities);
+      if (!this.apiKey) {
+        console.warn('Gemini API key missing. Using fallback advice.');
+        return this.getFallbackAdvice(userProfile, emotion);
+      }
+      const prompt = this.buildAdvicePrompt(userMessage, userProfile, emotion, entities, history);
 
       const response = await fetch(`${this.apiUrl}?key=${this.apiKey}`, {
         method: 'POST',
@@ -86,19 +91,28 @@ Respond with only the emotion word:`;
             parts: [{ text: prompt }]
           }],
           generationConfig: {
-            temperature: 0.7,
-            topP: 0.8,
+            temperature: 0.5,
+            topP: 0.9,
             topK: 40,
-            maxOutputTokens: 1000,
+            maxOutputTokens: 700
           }
         })
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.error) {
+        const status = data?.error?.status || response.status;
+        const message = data?.error?.message || 'Gemini API error';
+        console.warn(`Gemini API returned ${status}: ${message}. Using fallback advice.`);
+        return this.getFallbackAdvice(userProfile, emotion);
+      }
       console.log("Gemini generateFinancialAdvice response:", JSON.stringify(data, null, 2));
 
-      const advice = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
+   const advice =
+  data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+  data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data ||
+  data?.candidates?.[0]?.content?.parts?.map(p => p.text).join("\n") ||
+  null;
       if (!advice) {
         throw new Error('No advice generated');
       }
@@ -111,60 +125,83 @@ Respond with only the emotion word:`;
     }
   }
 
-  buildAdvicePrompt(userMessage, userProfile, emotion, entities) {
+  buildAdvicePrompt(userMessage, userProfile, emotion, entities, history = []) {
+    const safe = (v, d='') => (v === undefined || v === null ? d : v);
+    const name = safe(userProfile?.name, 'User');
+    const salary = Number(safe(userProfile?.salary, 0));
+    const expenses = Number(safe(userProfile?.expenses, 0));
+    const riskTol = safe(userProfile?.risk_tolerance || userProfile?.riskTolerance, 'moderate');
+    const targetSave = Number(safe(userProfile?.target_savings || userProfile?.targetSavings, 0));
+    const lifeStage = safe(userProfile?.life_stage || userProfile?.lifeStage, 'general');
+    const country = safe(userProfile?.country, 'IN');
+    const goals = Array.isArray(userProfile?.goals) ? userProfile.goals.join(', ') : safe(userProfile?.goals, 'Not specified');
+    const recent = history.slice(-6).map(h => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content}`).join('\n');
     const entitiesText = entities.length > 0 ? entities.join(', ') : 'None mentioned';
 
-    return `You are Dr. Zypher, an AI Financial Therapist specializing in emotional financial wellness. Provide personalized, empathetic financial advice.
+    return `You are Dr. Zypher, an AI Financial Therapist specializing in emotional financial wellness. Provide personalized, empathetic, and actionable financial advice. Keep it concise.
 
 USER PROFILE:
-- Name: ${userProfile.name}
+- Name: ${name}
 - Current Emotion: ${emotion}
-- Salary: ₹${userProfile.salary}
-- Monthly Expenses: ₹${userProfile.expenses}
-- Risk Tolerance: ${userProfile.risk_tolerance}
-- Savings Target: ₹${userProfile.target_savings}
-- Life Stage: ${userProfile.life_stage}
-- Country: ${userProfile.country}
-- Goals: ${userProfile.goals.join(', ') || 'Not specified'}
+- Salary: ₹${salary}
+- Monthly Expenses: ₹${expenses}
+- Risk Tolerance: ${riskTol}
+- Savings Target: ₹${targetSave}
+- Life Stage: ${lifeStage}
+- Country: ${country}
+- Goals: ${goals}
 
 USER MESSAGE: "${userMessage}"
 INVESTMENT ENTITIES MENTIONED: ${entitiesText}
 
-INSTRUCTIONS:
-1. Address the user by name and acknowledge their emotional state
-2. Provide specific, actionable financial advice
-3. Consider their risk tolerance and life stage
-4. If investment entities were mentioned, provide relevant insights
-5. Include emotional support and encouragement
-6. Suggest 2-3 specific next steps
-7. Keep response conversational and supportive
-8. Include relevant Indian financial context (since country is IN)
+RECENT CONTEXT (most recent last):
+${recent || 'None'}
 
-FORMAT YOUR RESPONSE AS:
-Hey [Name]! 👋
+INSTRUCTIONS (STRICT):
+1. Start with a one-line greeting using the user's name and current emotion.
+2. Provide only high-signal, personalized points grounded in the profile and the user message.
+3. Reflect mentioned entities if any; add cautions when needed.
+4. Include 3–5 bullet recommendations and 3 concise next steps.
+5. Use INR formatting and Indian context when appropriate.
+6. Output must be SHORT, SCANNABLE and STRUCTURED. NO long paragraphs.
 
-[Emotional acknowledgment]
+OUTPUT FORMAT (STRICT, EXACT HEADERS):
+Greeting: Hey ${userProfile.name}! 👋
+Mood: ${emotion}
 
-[Main financial advice - 2-3 paragraphs]
+Advice:
+- [concise point 1]
+- [concise point 2]
+- [concise point 3]
+- [optional point 4]
+- [optional point 5]
 
-💡 Specific Recommendations:
-• [Recommendation 1]
-• [Recommendation 2]
-• [Recommendation 3]
+Next steps:
+1) [short action]
+2) [short action]
+3) [short action]
 
-🎯 Next Steps:
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
-
-Remember: Your financial journey is unique, and it's completely normal to feel ${emotion} about money decisions. You're taking the right step by seeking guidance!
-
-Response:`;
+Note: Keep decisions aligned to ${userProfile.risk_tolerance} risk and ${userProfile.life_stage} stage.
+`;
   }
 
   formatAdviceResponse(advice, userProfile, emotion, entities) {
+    const trimmed = typeof advice === 'string' ? advice.trim() : '';
+    
+    // If the advice is already in the structured format, return it as is
+    if (trimmed.includes('Greeting:') && trimmed.includes('Advice:') && trimmed.includes('Next steps:')) {
+      return {
+        advice: trimmed,
+        emotion: emotion,
+        suggestions: this.getEmotionalSuggestions(emotion),
+        resources: this.getRecommendedResources(emotion, userProfile),
+        entities: entities
+      };
+    }
+    
+    // Otherwise, format it into the expected structure
     return {
-      advice: advice,
+      advice: trimmed,
       emotion: emotion,
       suggestions: this.getEmotionalSuggestions(emotion),
       resources: this.getRecommendedResources(emotion, userProfile),
@@ -246,21 +283,19 @@ Response:`;
     const name = userProfile.name || 'there';
     return {
       emotion,
-      advice: `Hi ${name}! I understand you're feeling ${emotion} about your financial situation. 
+      advice: `Greeting: Hey ${name}! 👋
+Mood: ${emotion}
 
-Based on your profile, I can see you're earning ₹${userProfile.salary} with monthly expenses of ₹${userProfile.expenses}. This gives you a monthly surplus of ₹${userProfile.salary - userProfile.expenses} which is a great starting point!
+Advice:
+- Keep essentials under 50% of income; automate savings from surplus ₹${userProfile.salary - userProfile.expenses}.
+- Build 3–6 months emergency fund: ~₹${userProfile.expenses * 3}–₹${userProfile.expenses * 6} in liquid options.
+- Start SIPs aligned to ${userProfile.risk_tolerance} risk (PPF/FD for safety; diversified index/ELSS for growth).
 
-💡 Here are some immediate steps you can take:
-• Build an emergency fund covering 6 months of expenses (₹${userProfile.expenses * 6})
-• Start a SIP in a diversified mutual fund with ₹${Math.min(5000, (userProfile.salary - userProfile.expenses) * 0.3)}/month
-• Consider ELSS funds for tax saving under Section 80C
-
-🎯 Next Steps:
-1. Open an investment account if you haven't already
-2. Complete your KYC requirements
-3. Start with one small investment to build confidence
-
-Remember, feeling ${emotion} about money is completely normal. Take it one step at a time!`,
+Next steps:
+1) Set auto-transfer on salary day to savings/investments.
+2) Open/verify PPF or low-cost index SIP; start small.
+3) Track expenses weekly for one month to find cuts.
+`,
       suggestions: this.getEmotionalSuggestions(emotion),
       resources: this.getRecommendedResources(emotion, userProfile),
       entities: []

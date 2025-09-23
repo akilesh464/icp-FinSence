@@ -5,10 +5,14 @@ import Button from '../../../components/ui/Button';
 const CommunityWisdomPanel = ({ 
   culturalContext = 'default',
   userRegion = 'north-indian',
-  className = '' 
+  className = '',
+  festivalBudgets,
+  festivals
 }) => {
   const [activeTab, setActiveTab] = useState('wisdom');
   const [selectedPost, setSelectedPost] = useState(null);
+  const [activeChallenge, setActiveChallenge] = useState(null);
+  const [showTipForm, setShowTipForm] = useState(false);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
@@ -414,7 +418,208 @@ const CommunityWisdomPanel = ({
     </div>
   );
 
-  const tabs = getTabs();
+  const getCommunityTips = () => {
+    if (culturalContext === 'hindi') {
+      return [
+        {
+          id: 1,
+          title: 'त्योहारी बचत की रणनीति',
+          content: 'हर महीने त्योहारों के लिए अलग से बचत करें। दिवाली के लिए साल भर में छोटी-छोटी रकम जमा करते रहें।',
+          author: 'सुनीता शर्मा, दिल्ली',
+          likes: 45,
+          category: 'बचत'
+        },
+        {
+          id: 2,
+          title: 'सामूहिक खरीदारी',
+          content: 'पड़ोसियों के साथ मिलकर त्योहारी सामान खरीदें। थोक में खरीदने से काफी बचत होती है।',
+          author: 'राजेश कुमार, मुंबई',
+          likes: 32,
+          category: 'खरीदारी'
+        }
+      ];
+    }
+    
+    return [
+      {
+        id: 1,
+        title: 'Festival Savings Strategy',
+        content: 'Start saving for festivals early. Set aside a small amount each month specifically for celebrations like Diwali and Holi.',
+        author: 'Jeba Kumar, Delhi',
+        likes: 45,
+        category: 'Savings'
+      },
+      {
+        id: 2,
+        title: 'Group Buying Benefits',
+        content: 'Coordinate with neighbors for bulk purchases of festival items. Buying in bulk often leads to significant discounts.',
+        author: 'Malak, Mumbai',
+        likes: 32,
+        category: 'Shopping'
+      }
+    ];
+  };
+
+  const tips = getCommunityTips();
+
+  const renderTipsSection = () => (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-card rounded-xl border shadow-soft p-6">
+        <div className="flex items-center space-x-3 mb-4">
+          <Icon name="Users" size={24} className="text-primary" />
+          <h3 className="text-lg font-heading text-foreground">
+            {culturalContext === 'hindi' ? 'समुदायिक सुझाव' : 'Community Tips'}
+          </h3>
+        </div>
+        <p className="text-muted-foreground">
+          {culturalContext === 'hindi' 
+            ? 'अपने समुदाय के अनुभवी लोगों से त्योहारी बजट की सलाह लें।'
+            : 'Learn from experienced community members about festival budgeting.'
+          }
+        </p>
+      </div>
+
+      {/* Tips */}
+      <div className="grid gap-4">
+        {tips.map((tip) => (
+          <div key={tip.id} className="bg-card rounded-xl border shadow-soft p-6">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <h4 className="font-medium text-foreground mb-2">{tip.title}</h4>
+                <p className="text-sm text-muted-foreground mb-3">{tip.content}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{tip.author}</span>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="ghost" size="sm" iconName="Heart">
+                      {tip.likes}
+                    </Button>
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                      {tip.category}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Share Your Tip */}
+      <div className="bg-card rounded-xl border shadow-soft p-6">
+        <h4 className="font-medium text-foreground mb-3">
+          {culturalContext === 'hindi' ? 'अपना सुझाव साझा करें' : 'Share Your Tip'}
+        </h4>
+        <Button className="w-full" iconName="Plus" iconPosition="left">
+          {culturalContext === 'hindi' ? 'सुझाव जोड़ें' : 'Add Tip'}
+        </Button>
+      </div>
+    </div>
+  );
+
+  const handleLike = (tipId) => {
+    // Handle like functionality
+    console.log('Liked tip:', tipId);
+  };
+
+  const handleJoinChallenge = (challengeId) => {
+    setActiveChallenge(challengeId);
+  };
+
+  const renderChallengesSection = () => (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-card rounded-xl border shadow-soft p-6">
+        <div className="flex items-center space-x-3 mb-4">
+          <Icon name="Trophy" size={24} className="text-warning" />
+          <h3 className="text-lg font-heading text-foreground">
+            {culturalContext === 'hindi' ? 'सक्रिय चुनौतियां' : 'Active Challenges'}
+          </h3>
+        </div>
+        <p className="text-muted-foreground">
+          {culturalContext === 'hindi' 
+            ? 'इनाम जीतने के लिए इन चुनौतियों में भाग लें!'
+            : 'Participate in these challenges to win rewards!'
+          }
+        </p>
+      </div>
+
+      {/* Challenges List */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {getActiveChallenges()?.map((challenge) => (
+          <div key={challenge?.id} className="glass-card rounded-lg p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <h4 className="text-base font-medium text-foreground">{challenge?.title}</h4>
+                <p className="text-sm text-muted-foreground mb-2">{challenge?.description}</p>
+                <div className="flex items-center space-x-2">
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    challenge?.difficulty === 'Easy' ? 'bg-green-100 text-green-700' :
+                    challenge?.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    {challenge?.difficulty}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {challenge?.participants} {culturalContext === 'hindi' ? 'भागीदार' : 'participants'}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-medium text-primary">{challenge?.prize}</p>
+                <p className="text-xs text-muted-foreground">
+                  {culturalContext === 'hindi' ? 'पुरस्कार' : 'Prize'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-muted-foreground">
+                {culturalContext === 'hindi' ? 'समय सीमा' : 'Deadline'}: {new Date(challenge?.deadline).toLocaleDateString()}
+              </div>
+              <Button
+                size="sm"
+                onClick={() => handleJoinChallenge(challenge?.id)}
+                disabled={activeChallenge === challenge?.id}
+              >
+                {activeChallenge === challenge?.id 
+                  ? (culturalContext === 'hindi' ? 'शामिल हो गए' : 'Joined')
+                  : (culturalContext === 'hindi' ? 'शामिल हों' : 'Join')
+                }
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const getActiveChallenges = () => {
+    return [
+      {
+        id: 1,
+        title: culturalContext === 'hindi' ? 'दिवाली ₹5000 चैलेंज' : 'Diwali ₹5000 Challenge',
+        description: culturalContext === 'hindi' 
+          ? 'पूरे दिवाली सीजन में केवल ₹5000 में सब कुछ मनाएं'
+          : 'Celebrate entire Diwali season within ₹5000 budget',
+        participants: 234,
+        prize: '₹1,000',
+        deadline: '2025-10-15',
+        difficulty: 'Medium'
+      },
+      {
+        id: 2,
+        title: culturalContext === 'hindi' ? 'होली इको चैलेंज' : 'Holi Eco Challenge',
+        description: culturalContext === 'hindi' 
+          ? 'केवल प्राकृतिक रंगों का उपयोग करके होली मनाएं'
+          : 'Celebrate Holi using only natural colors',
+        participants: 156,
+        prize: '₹500',
+        deadline: '2025-03-10',
+        difficulty: 'Easy'
+      }
+    ];
+  };
 
   return (
     <div className={`glass-card rounded-xl p-6 ${className}`}>
@@ -440,7 +645,7 @@ const CommunityWisdomPanel = ({
       </div>
       {/* Tab Navigation */}
       <div className="flex space-x-1 mb-6 bg-muted/30 rounded-lg p-1">
-        {tabs?.map((tab) => (
+        {getTabs()?.map((tab) => (
           <button
             key={tab?.id}
             onClick={() => setActiveTab(tab?.id)}
@@ -463,7 +668,79 @@ const CommunityWisdomPanel = ({
         {activeTab === 'community' && renderCommunityTab()}
         {activeTab === 'success' && renderSuccessTab()}
         {activeTab === 'support' && renderSupportTab()}
+        {activeTab === 'tips' && renderTipsSection()}
+        {activeTab === 'challenges' && renderChallengesSection()}
       </div>
+
+      {/* Add Tip Modal */}
+      {showTipForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-heading">
+                {culturalContext === 'hindi' ? 'नया टिप जोड़ें' : 'Add New Tip'}
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowTipForm(false)}
+                iconName="X"
+              />
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  {culturalContext === 'hindi' ? 'त्योहार' : 'Festival'}
+                </label>
+                <select className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                  <option value="">{culturalContext === 'hindi' ? 'त्योहार चुनें' : 'Select Festival'}</option>
+                  {festivals.map(festival => (
+                    <option key={festival.id} value={festival.id}>{festival.name}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  {culturalContext === 'hindi' ? 'आपका सुझाव' : 'Your Tip'}
+                </label>
+                <textarea
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary h-24 resize-none"
+                  placeholder={culturalContext === 'hindi' ? 'अपना टिप साझा करें...' : 'Share your tip...'}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  {culturalContext === 'hindi' ? 'अनुमानित बचत' : 'Estimated Savings'}
+                </label>
+                <input
+                  type="number"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder={culturalContext === 'hindi' ? 'राशि (₹)' : 'Amount (₹)'}
+                />
+              </div>
+              
+              <div className="flex space-x-3 pt-4">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowTipForm(false)}
+                >
+                  {culturalContext === 'hindi' ? 'रद्द करें' : 'Cancel'}
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={() => setShowTipForm(false)}
+                >
+                  {culturalContext === 'hindi' ? 'साझा करें' : 'Share'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

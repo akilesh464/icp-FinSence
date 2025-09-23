@@ -89,14 +89,6 @@ const ChatMessage = ({
           />
         )}
 
-        <div className={`
-          flex items-center justify-between mt-2 px-2
-          ${isUser ? 'flex-row-reverse' : 'flex-row'}
-        `}>
-          <span className="text-xs text-muted-foreground">
-            {formatTimestamp(timestamp)}
-          </span>
-
         {/* Message Content */}
         <div 
           className={`

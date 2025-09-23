@@ -3,13 +3,19 @@ import EmotionalHeader from '../../components/ui/EmotionalHeader';
 import VoiceAssistantToggle from '../../components/ui/VoiceAssistantToggle';
 import CrisisInterventionOverlay from '../../components/ui/CrisisInterventionOverlay';
 import CulturalContextIndicator from '../../components/ui/CulturalContextIndicator';
+import UserOnboardingModal from '../../components/ui/UserOnboardingModal';
+import ICPAccountSetup from '../../components/ui/ICPAccountSetup';
 import FinancialEmotionalScore from './components/FinancialEmotionalScore';
+import BasicDetailsBar from './components/BasicDetailsBar';
 import NetWorthSummary from './components/NetWorthSummary';
 import RecentTransactions from './components/RecentTransactions';
 import UpcomingBills from './components/UpcomingBills';
 import CulturalFinancialWisdom from './components/CulturalFinancialWisdom';
 import QuickActionButtons from './components/QuickActionButtons';
 import EmotionalStateSidebar from './components/EmotionalStateSidebar';
+import { chatService } from '../../services/ChatService';
+import { financialDataService } from '../../services/FinancialDataService';
+import { hasICPAccount, isAuthenticated } from '../../ic/auth';
 
 const EmotionalFinancialDashboard = () => {
   const [emotionalState, setEmotionalState] = useState('calm');
@@ -17,19 +23,62 @@ const EmotionalFinancialDashboard = () => {
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [showCrisisOverlay, setShowCrisisOverlay] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showICPAccountSetup, setShowICPAccountSetup] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
+  const [isICPAuthenticated, setIsICPAuthenticated] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [transactionRefreshTrigger, setTransactionRefreshTrigger] = useState(0);
 
   useEffect(() => {
-    // Load saved preferences from localStorage
-    const savedLanguage = localStorage.getItem('culturalContext') || 'default';
-    const savedEmotionalState = localStorage.getItem('emotionalState') || 'calm';
-    
-    setCulturalContext(savedLanguage);
-    setEmotionalState(savedEmotionalState);
-    
-    // Simulate initial loading
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    const initializeDashboard = async () => {
+      // Load saved preferences from localStorage
+      const savedLanguage = localStorage.getItem('culturalContext') || 'default';
+      const savedEmotionalState = localStorage.getItem('emotionalState') || 'calm';
+      
+      setCulturalContext(savedLanguage);
+      setEmotionalState(savedEmotionalState);
+      
+      // Check ICP authentication status
+      try {
+        const authenticated = await isAuthenticated();
+        setIsICPAuthenticated(authenticated);
+        
+        if (authenticated) {
+          console.log('User is authenticated with ICP');
+          // Check if user profile exists
+          const profile = await chatService.getUserData();
+          if (profile && profile.length > 0 && profile[0].name) {
+            setUserProfile(profile[0]);
+            console.log('User profile loaded from ICP:', profile[0]);
+          } else {
+            // Show onboarding if no profile exists
+            setShowOnboarding(true);
+          }
+        } else {
+          // Check if user has an ICP account
+          const hasAccount = hasICPAccount();
+          if (hasAccount) {
+            // User has ICP account but not authenticated, show login prompt
+            console.log('User has ICP account but not authenticated');
+          } else {
+            // Show ICP account setup
+            setShowICPAccountSetup(true);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to initialize dashboard:', error);
+        // Show ICP account setup on error
+        setShowICPAccountSetup(true);
+      }
+      
+      // Simulate initial loading
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 1000);
+    };
+
+    initializeDashboard();
 
     // Listen for crisis intervention events
     const handleCrisisEvent = () => {
@@ -37,6 +86,36 @@ const EmotionalFinancialDashboard = () => {
     };
 
     document.addEventListener('triggerCrisisHelp', handleCrisisEvent);
+    
+    // Listen for ICP login success
+    const handleICPLoginSuccess = async (event) => {
+      console.log('ICP login success event received:', event.detail);
+      setIsICPAuthenticated(true);
+      
+      // Check if user has profile data
+      try {
+        const profile = await chatService.getUserData();
+        if (profile && profile.length > 0 && profile[0].name) {
+          setUserProfile(profile[0]);
+          console.log('User profile loaded after ICP login:', profile[0]);
+        } else {
+          // Show onboarding to collect user data
+          setShowOnboarding(true);
+        }
+      } catch (error) {
+        console.error('Failed to load user profile after ICP login:', error);
+        setShowOnboarding(true);
+      }
+    };
+    
+    // Listen for transaction updates
+    const handleTransactionUpdate = () => {
+      console.log('Transaction update event received');
+      setTransactionRefreshTrigger(prev => prev + 1);
+    };
+    
+    document.addEventListener('icp-login-success', handleICPLoginSuccess);
+    document.addEventListener('transaction-updated', handleTransactionUpdate);
     
     // Simulate emotional state detection (in real app, this would come from AI analysis)
     const emotionalStateInterval = setInterval(() => {
@@ -60,6 +139,8 @@ const EmotionalFinancialDashboard = () => {
 
     return () => {
       document.removeEventListener('triggerCrisisHelp', handleCrisisEvent);
+      document.removeEventListener('icp-login-success', handleICPLoginSuccess);
+      document.removeEventListener('transaction-updated', handleTransactionUpdate);
       clearInterval(emotionalStateInterval);
     };
   }, [emotionalState]);
@@ -75,6 +156,106 @@ const EmotionalFinancialDashboard = () => {
   const handleCulturalContextChange = (newContext) => {
     setCulturalContext(newContext);
     localStorage.setItem('culturalContext', newContext);
+  };
+
+  const handleSaveUserProfile = async (profileData) => {
+    try {
+      // Map onboarding fields to backend schema
+      const payload = {
+        name: profileData?.name,
+        riskTolerance: profileData?.riskTolerance,
+        savings: profileData?.savings,
+        debt: profileData?.debt,
+        country: profileData?.country,
+        language: profileData?.language,
+        lifeStage: profileData?.lifeStage,
+        goals: profileData?.goals
+      };
+
+      console.log('Saving user profile payload:', payload);
+      const savedProfile = await chatService.updateUserProfile(payload);
+      console.log('Profile saved response:', savedProfile);
+      
+      // Immediately pull normalized profile (arrays) for UI consistency
+      try {
+        const latest = await chatService.getUserData();
+        console.log('Latest user data retrieved:', latest);
+        if (latest && latest.length > 0) {
+          setUserProfile(latest[0]);
+          console.log('User profile updated in state:', latest[0]);
+        } else {
+          setUserProfile(savedProfile);
+          console.log('Using saved profile as fallback:', savedProfile);
+        }
+      } catch (error) {
+        console.error('Error fetching latest user data:', error);
+        setUserProfile(savedProfile);
+      }
+      
+      setShowOnboarding(false);
+      
+      // Update financial data with onboarding values
+      if (payload.savings !== undefined && payload.debt !== undefined) {
+        financialDataService.forceReinitializeWithOnboarding();
+        console.log('Financial data force reinitialized with onboarding values:', {
+          savings: payload.savings,
+          debt: payload.debt
+        });
+      }
+      
+      // Show success message
+      console.log('User profile saved successfully:', savedProfile);
+      
+      // Update cultural context if changed
+      if (payload.language && payload.language !== culturalContext) {
+        setCulturalContext(payload.language);
+        localStorage.setItem('culturalContext', payload.language);
+      }
+      
+        // Force a re-render of NetWorthSummary
+        setRefreshTrigger(prev => prev + 1);
+        console.log('Triggered NetWorthSummary refresh');
+        
+        // Dispatch event to notify therapy chat of profile update
+        const event = new CustomEvent('profile-updated', {
+          detail: { profile: savedProfile }
+        });
+        document.dispatchEvent(event);
+      
+    } catch (error) {
+      console.error('Failed to save user profile:', error);
+      // Add user-facing error handling
+      alert(culturalContext === 'hindi' 
+        ? 'प्रोफ़ाइल सेव करने में त्रुटि। कृपया पुनः प्रयास करें।'
+        : 'Error saving profile. Please try again.');
+      throw error;
+    }
+  };
+
+  const handleShowOnboarding = () => {
+    setShowOnboarding(true);
+  };
+
+  const handleICPAccountCreated = async () => {
+    console.log('ICP account created successfully');
+    setShowICPAccountSetup(false);
+    
+    // Check authentication status again
+    try {
+      const authenticated = await isAuthenticated();
+      setIsICPAuthenticated(authenticated);
+      
+      if (authenticated) {
+        // Show onboarding to collect user data
+        setShowOnboarding(true);
+      }
+    } catch (error) {
+      console.error('Failed to check authentication after account creation:', error);
+    }
+  };
+
+  const handleShowICPAccountSetup = () => {
+    setShowICPAccountSetup(true);
   };
 
   const getPageTitle = () => {
@@ -95,7 +276,17 @@ const EmotionalFinancialDashboard = () => {
       else greeting = 'Good Evening';
     }
     
-    return `${greeting}! ${culturalContext === 'hindi' ? 'आपका वित्तीय स्वास्थ्य कैसा है?' : 'How is your financial wellness today?'}`;
+    const userName = userProfile?.name || '';
+    const nameGreeting = userName ? `, ${userName}` : '';
+    
+    let statusMessage = '';
+    if (isICPAuthenticated) {
+      statusMessage = culturalContext === 'hindi' 
+        ? ' (ICP खाते से सुरक्षित)'
+        : ' (Secured with ICP)';
+    }
+    
+    return `${greeting}${nameGreeting}! ${culturalContext === 'hindi' ? 'आपका वित्तीय स्वास्थ्य कैसा है?' : 'How is your financial wellness today?'}${statusMessage}`;
   };
 
   if (isLoading) {
@@ -110,14 +301,6 @@ const EmotionalFinancialDashboard = () => {
       </div>
     );
   }
-
-   if (hour >= 9 && hour <= 11) {
-        newState = 'positive'; // Morning productivity
-      } else if (hour >= 12 && hour <= 14) {
-        newState = 'stressed'; // Lunch time stress
-      } else if (hour >= 18 && hour <= 20) {
-        newState = 'calm'; // Evening relaxation
-      }
 
   return (
     <div className={`min-h-screen bg-background transition-emotional ${emotionalState}-state`}>
@@ -156,9 +339,38 @@ const EmotionalFinancialDashboard = () => {
                   emotionalState={emotionalState}
                   culturalContext={culturalContext}
                 />
+                {userProfile && (
+                  <button
+                    onClick={handleShowOnboarding}
+                    className="px-4 py-2 text-sm bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-ui"
+                  >
+                    {culturalContext === 'hindi' ? 'प्रोफ़ाइल संपादित करें' : 'Edit Profile'}
+                  </button>
+                )}
+                
+                {/* Debug button for testing ICP flow */}
+                {!isICPAuthenticated && (
+                  <button
+                    onClick={handleShowICPAccountSetup}
+                    className="px-4 py-2 text-sm bg-teal-500/10 text-teal-500 rounded-lg hover:bg-teal-500/20 transition-ui"
+                  >
+                    {culturalContext === 'hindi' ? 'ICP खाता सेटअप' : 'ICP Account Setup'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
+
+          {/* Basic details quick bar for new users */}
+          {(!userProfile || !userProfile?.name) && (
+            <div className="mb-6">
+              <BasicDetailsBar
+                culturalContext={culturalContext}
+                defaultValues={{}}
+                onSave={handleSaveUserProfile}
+              />
+            </div>
+          )}
 
           {/* Dashboard Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -169,10 +381,15 @@ const EmotionalFinancialDashboard = () => {
                 <FinancialEmotionalScore
                   emotionalState={emotionalState}
                   culturalContext={culturalContext}
+                  userProfile={userProfile}
                 />
                 <NetWorthSummary
                   emotionalState={emotionalState}
                   culturalContext={culturalContext}
+                  userProfile={userProfile}
+                  refreshTrigger={refreshTrigger}
+                  transactionRefreshTrigger={transactionRefreshTrigger}
+                  key={`networth-${refreshTrigger}-${transactionRefreshTrigger}`}
                 />
               </div>
 
@@ -181,10 +398,12 @@ const EmotionalFinancialDashboard = () => {
                 <RecentTransactions
                   emotionalState={emotionalState}
                   culturalContext={culturalContext}
+                  refreshTrigger={transactionRefreshTrigger}
                 />
                 <UpcomingBills
                   emotionalState={emotionalState}
                   culturalContext={culturalContext}
+                  refreshTrigger={transactionRefreshTrigger}
                 />
               </div>
 
@@ -193,13 +412,16 @@ const EmotionalFinancialDashboard = () => {
                 <CulturalFinancialWisdom
                   emotionalState={emotionalState}
                   culturalContext={culturalContext}
+                  userProfile={userProfile}
                 />
                 <QuickActionButtons
                   emotionalState={emotionalState}
                   culturalContext={culturalContext}
+                  userProfile={userProfile}
                   onVoiceToggle={handleVoiceToggle}
                 />
               </div>
+
             </div>
 
             {/* Right Column - Emotional Analytics Sidebar (Desktop Only) */}
@@ -208,6 +430,7 @@ const EmotionalFinancialDashboard = () => {
                 <EmotionalStateSidebar
                   emotionalState={emotionalState}
                   culturalContext={culturalContext}
+                  userProfile={userProfile}
                 />
               </div>
             </div>
@@ -218,6 +441,7 @@ const EmotionalFinancialDashboard = () => {
             <EmotionalStateSidebar
               emotionalState={emotionalState}
               culturalContext={culturalContext}
+              userProfile={userProfile}
             />
           </div>
         </div>
@@ -241,6 +465,22 @@ const EmotionalFinancialDashboard = () => {
           <span className="text-2xl">🆘</span>
         </button>
       </div>
+
+      {/* User Onboarding Modal */}
+      <UserOnboardingModal
+        isVisible={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onSave={handleSaveUserProfile}
+        culturalContext={culturalContext}
+      />
+
+      {/* ICP Account Setup Modal */}
+      <ICPAccountSetup
+        isVisible={showICPAccountSetup}
+        onClose={() => setShowICPAccountSetup(false)}
+        onAccountCreated={handleICPAccountCreated}
+        culturalContext={culturalContext}
+      />
     </div>
   );
 };

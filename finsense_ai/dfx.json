@@ -10,7 +10,7 @@
     },
     "finsense_frontend": {
       "type": "assets",
-      "source": ["dist"],
+      "source": ["build/"],
       "dependencies": ["finsense_backend"],
       "asset_policy": ".ic-assets.json5"
     }
@@ -26,7 +26,8 @@
       "type": "ephemeral"
     },
     "ic": {
-      "providers": ["https://ic0.app"]
+      "providers": ["https://mainnet.dfinity.network"],
+      "type": "persistent"
     }
   }
 }

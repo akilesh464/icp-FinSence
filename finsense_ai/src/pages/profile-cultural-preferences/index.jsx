@@ -6,6 +6,9 @@ import EmotionalHeader from '../../components/ui/EmotionalHeader';
 import VoiceAssistantToggle from '../../components/ui/VoiceAssistantToggle';
 import CrisisInterventionOverlay from '../../components/ui/CrisisInterventionOverlay';
 import CulturalContextIndicator from '../../components/ui/CulturalContextIndicator';
+import { chatService } from '../../services/ChatService';
+import { useUserProfile } from '../../hooks/useUserProfile';
+import OnboardingForm from '../../components/forms/OnboardingForm';
 
 // Import all section components
 import PersonalInfoSection from './components/PersonalInfoSection';
@@ -30,15 +33,17 @@ const ProfileCulturalPreferences = () => {
     voiceAssistant: false
   });
 
-  // Mock user profile data
+  // User profile data - will be loaded from backend
+  const { profile, isLoading, saveProfile } = useUserProfile();
+
   const [profileData, setProfileData] = useState({
     personalInfo: {
-      fullName: "Arjun Sharma",
-      email: "arjun.sharma@email.com",
-      phone: "+91 98765 43210",
-      dateOfBirth: "1992-05-15",
-      gender: "male",
-      occupation: "software_engineer",
+      fullName: "",
+      email: "",
+      phone: "",
+      dateOfBirth: "",
+      gender: "",
+      occupation: "",
       primaryLanguage: "hindi"
     },
     culturalPrefs: {
@@ -93,9 +98,50 @@ const ProfileCulturalPreferences = () => {
   });
 
   useEffect(() => {
-    // Load saved language preference
-    const savedLanguage = localStorage.getItem('culturalContext') || 'default';
-    setCulturalContext(savedLanguage);
+    const initializeProfile = async () => {
+      // Load saved language preference
+      const savedLanguage = localStorage.getItem('culturalContext') || 'default';
+      setCulturalContext(savedLanguage);
+
+      // Load user profile data from backend
+      try {
+        const userData = await chatService.getUserData();
+        console.log('Loaded user data in profile page:', userData);
+        
+        if (userData && userData.length > 0) {
+          const user = userData[0];
+          console.log('Processing user data:', user);
+          
+          setProfileData(prev => ({
+            ...prev,
+            personalInfo: {
+              fullName: user.name?.[0] || "",
+              email: "", // Not stored in backend yet
+              phone: "", // Not stored in backend yet
+              dateOfBirth: "", // Not stored in backend yet
+              gender: "", // Not stored in backend yet
+              occupation: "", // Not stored in backend yet
+              primaryLanguage: user.language?.[0] || savedLanguage
+            },
+            // Update other sections with backend data
+            culturalPrefs: {
+              ...prev.culturalPrefs,
+              // Map backend data to cultural preferences
+            },
+            aiSettings: {
+              ...prev.aiSettings,
+              // Map backend data to AI settings
+            }
+          }));
+        } else {
+          console.log('No user data found, using default profile');
+        }
+      } catch (error) {
+        console.error('Failed to load user profile:', error);
+      }
+    };
+
+    initializeProfile();
 
     // Listen for crisis intervention events
     const handleCrisisEvent = () => setShowCrisisOverlay(true);
@@ -118,11 +164,24 @@ const ProfileCulturalPreferences = () => {
     }));
   };
 
-  const handleSectionUpdate = (sectionKey, data) => {
+  const handleSectionUpdate = async (sectionKey, data) => {
     setProfileData(prev => ({
       ...prev,
       [sectionKey]: { ...prev?.[sectionKey], ...data }
     }));
+
+    // If updating personal info, also update backend
+    if (sectionKey === 'personalInfo') {
+      try {
+        await chatService.updateUserProfile({
+          name: data.fullName,
+          language: data.primaryLanguage,
+          // Add other fields as they become available in backend
+        });
+      } catch (error) {
+        console.error('Failed to update user profile:', error);
+      }
+    }
   };
 
   const handleVoiceToggle = (active) => {
@@ -159,6 +218,67 @@ const ProfileCulturalPreferences = () => {
   };
 
   const overallCompletion = getOverallCompletionPercentage();
+
+  const handleOnboardingSubmit = async (data) => {
+    const saved = await saveProfile(data);
+    if (saved) {
+      // Update cultural context if language changed
+      if (data.primaryLanguage === 'hindi') {
+        setCulturalContext('hindi');
+        localStorage.setItem('culturalContext', 'hindi');
+      }
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+          <p className="mt-4 text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show onboarding if no profile exists
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-background pt-20">
+        <div className="max-w-md mx-auto px-4">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-heading text-foreground mb-2">
+              {culturalContext === 'hindi' ? 'प्रोफ़ाइल सेटअप' : 'Profile Setup'}
+            </h1>
+            <p className="text-muted-foreground">
+              {culturalContext === 'hindi' 
+                ? 'अपनी जानकारी भरें और शुरू करें' 
+                : 'Fill in your details to get started'
+              }
+            </p>
+          </div>
+          <OnboardingForm 
+            culturalContext={culturalContext}
+            onSubmit={handleOnboardingSubmit}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Update profile data structure with saved values
+  const updatedProfileData = {
+    ...profileData,
+    personalInfo: {
+      fullName: profile.fullName || '',
+      email: profile.email || '',
+      phone: profile.phone || '',
+      dateOfBirth: profile.dateOfBirth || '',
+      gender: profile.gender || '',
+      occupation: profile.occupation || '',
+      primaryLanguage: profile.primaryLanguage || 'english'
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -235,7 +355,7 @@ const ProfileCulturalPreferences = () => {
           <div className="space-y-6">
             {/* Personal Information */}
             <PersonalInfoSection
-              personalInfo={profileData?.personalInfo}
+              personalInfo={updatedProfileData?.personalInfo}
               onUpdate={(data) => handleSectionUpdate('personalInfo', data)}
               isExpanded={expandedSections?.personalInfo}
               onToggle={() => handleSectionToggle('personalInfo')}
@@ -301,11 +421,24 @@ const ProfileCulturalPreferences = () => {
             </Button>
             <Button
               variant="default"
-              onClick={() => {
-                // Save all settings
-                localStorage.setItem('userProfile', JSON.stringify(profileData));
-                alert(culturalContext === 'hindi' ?'सभी सेटिंग्स सफलतापूर्वक सहेजी गईं!' :'All settings saved successfully!'
-                );
+              onClick={async () => {
+                try {
+                  // Save all settings to backend (map fields to backend schema)
+                  await chatService.updateUserProfile({
+                    name: profileData.personalInfo.fullName,
+                    language: profileData.personalInfo.primaryLanguage,
+                    // If we later add salary/expenses here, map similarly
+                  });
+                  
+                  // Also save to localStorage for offline access
+                  localStorage.setItem('userProfile', JSON.stringify(profileData));
+                  
+                  alert(culturalContext === 'hindi' ?'सभी सेटिंग्स सफलतापूर्वक सहेजी गईं!' :'All settings saved successfully!'
+                  );
+                } catch (error) {
+                  console.error('Failed to save settings:', error);
+                  alert(culturalContext === 'hindi' ?'सेटिंग्स सहेजने में त्रुटि हुई' :'Error saving settings');
+                }
               }}
               iconName="Save"
               iconPosition="left"

@@ -1,56 +1,65 @@
-import { useEffect, useState } from "react";
-import { AuthClient } from "@dfinity/auth-client";
+import React from 'react';
+import { LogIn, User, Shield, Globe } from 'lucide-react';
+import { hasICPAccount, getICPPrincipal } from '../../ic/auth';
 
-export default function ICPAuthButton() {
-  const [auth, setAuth] = useState(null);
-  const [principal, setPrincipal] = useState(null);
+const ICPAuthButton = ({ onLogin, isAuthenticated = false, onLogout, culturalContext = 'default' }) => {
+  const hasAccount = hasICPAccount();
+  const principalId = getICPPrincipal();
 
-  useEffect(() => {
-    (async () => {
-      const client = await AuthClient.create();
-      setAuth(client);
-      if (await client.isAuthenticated()) {
-        const id = client.getIdentity();
-        setPrincipal(id.getPrincipal().toString());
-      }
-    })();
-  }, []);
+  if (isAuthenticated) {
+    return (
+      <div className="w-full space-y-2">
+        <div className="flex items-center justify-center space-x-2 bg-success/10 text-success px-4 py-2 rounded-lg border border-success/20">
+          <Shield size={16} />
+          <span className="text-sm font-medium">
+            {culturalContext === 'hindi' ? 'ICP सुरक्षित' : 'ICP Secured'}
+          </span>
+        </div>
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center justify-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+        >
+          <User size={16} />
+          <span>{culturalContext === 'hindi' ? 'लॉगआउट' : 'Logout'}</span>
+        </button>
+        {principalId && (
+          <p className="text-xs text-muted-foreground text-center truncate">
+            {principalId.substring(0, 20)}...
+          </p>
+        )}
+      </div>
+    );
+  }
 
-  const login = async () => {
-    if (!auth) return;
-    await auth.login({
-      identityProvider: "https://identity.ic0.app/#authorize",
-      onSuccess: () => {
-        const id = auth.getIdentity();
-        setPrincipal(id.getPrincipal().toString());
-      },
-    });
-  };
+  if (hasAccount) {
+    return (
+      <div className="w-full space-y-2">
+        <div className="flex items-center justify-center space-x-2 bg-warning/10 text-warning px-4 py-2 rounded-lg border border-warning/20">
+          <Globe size={16} />
+          <span className="text-sm font-medium">
+            {culturalContext === 'hindi' ? 'ICP खाता मौजूद' : 'ICP Account Exists'}
+          </span>
+        </div>
+        <button
+          onClick={onLogin}
+          className="w-full flex items-center justify-center space-x-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+        >
+          <LogIn size={16} />
+          <span>{culturalContext === 'hindi' ? 'लॉगिन करें' : 'Login'}</span>
+        </button>
+      </div>
+    );
+  }
 
-  const logout = async () => {
-    if (!auth) return;
-    await auth.logout();
-    setPrincipal(null);
-  };
-
-  const short = (p) => (p ?` ${p.slice(0, 6)}…${p.slice(-4)}` : "");
-
-  return principal ? (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground">{short(principal)}</span>
-      <button
-        onClick={logout}
-        className="px-3 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600"
-      >
-        Logout
-      </button>
-    </div>
-  ) : (
+  return (
     <button
-      onClick={login}
-      className="px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+      onClick={onLogin}
+      className="w-full flex items-center justify-center space-x-2 bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
     >
-      Login with ICP
+      <LogIn size={16} />
+      <span>{culturalContext === 'hindi' ? 'ICP खाता बनाएं' : 'Create ICP Account'}</span>
     </button>
   );
-}
+};
+
+export default ICPAuthButton;

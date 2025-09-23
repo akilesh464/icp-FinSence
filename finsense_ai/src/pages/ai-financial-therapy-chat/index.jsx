@@ -1,7 +1,7 @@
-// this is index.jsx for therapy chat
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { chatService } from "../../services/ChatService";
+import { financialDataService } from "../../services/FinancialDataService";
 
 const AIFinancialTherapyChat = () => {
   const [messages, setMessages] = useState([]);
@@ -9,17 +9,17 @@ const AIFinancialTherapyChat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [userProfile, setUserProfile] = useState({
     name: 'User',
-    salary: 50000,
-    expenses: 30000,
-    risk_tolerance: 'moderate',
-    target_savings: 100000,
-    country: 'IN',
-    language: 'en',
-    life_stage: 'early-career',
+    savings: 100000,
+    debt: 0,
+    riskTolerance: 'moderate',
+    country: 'India',
+    language: 'default',
+    lifeStage: 'adult',
     goals: []
   });
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showOnboardingPrompt, setShowOnboardingPrompt] = useState(false);
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
 
@@ -35,6 +35,27 @@ const AIFinancialTherapyChat = () => {
 
     // Load user profile and chat history
     loadUserData();
+
+    // Listen for profile updates from dashboard
+    const handleProfileUpdate = () => {
+      console.log('Profile update detected, reloading user data');
+      loadUserData();
+    };
+
+    // Listen for financial data updates
+    const handleFinancialUpdate = () => {
+      console.log('Financial data update detected, reloading user data');
+      loadUserData();
+    };
+
+    // Force refresh data on page load
+    setTimeout(() => {
+      console.log('Force refreshing user data on page load');
+      loadUserData();
+    }, 1000);
+
+    document.addEventListener('profile-updated', handleProfileUpdate);
+    document.addEventListener('transaction-updated', handleFinancialUpdate);
 
     // Initialize speech recognition
     if ('webkitSpeechRecognition' in window) {
@@ -57,6 +78,11 @@ const AIFinancialTherapyChat = () => {
         setIsListening(false);
       };
     }
+
+    return () => {
+      document.removeEventListener('profile-updated', handleProfileUpdate);
+      document.removeEventListener('transaction-updated', handleFinancialUpdate);
+    };
   }, []);
 
   useEffect(() => {
@@ -65,37 +91,83 @@ const AIFinancialTherapyChat = () => {
 
   const loadUserData = async () => {
     try {
-      const userData = await chatService.getUserData();
-      if (userData && userData.length > 0) {
-        const profile = userData[0];
-        setUserProfile({
-          name: profile.name?.[0] || 'User',
-          salary: profile.salary?.[0] || 50000,
-          expenses: profile.expenses?.[0] || 30000,
-          risk_tolerance: profile.riskTolerance?.[0] || 'moderate',
-          target_savings: profile.targetSavings?.[0] || 100000,
-          country: profile.country?.[0] || 'IN',
-          language: profile.language?.[0] || 'en',
-          life_stage: profile.lifeStage?.[0] || 'early-career',
-          goals: profile.goals || []
-        });
+      // Initialize financial data service first
+      financialDataService.initializeData();
+      
+      // Check if onboarding has been completed
+      const hasOnboardingData = financialDataService.hasOnboardingData();
+      console.log('Has onboarding data:', hasOnboardingData);
+      
+      if (hasOnboardingData) {
+        // Load user profile from ChatService
+        const userData = await chatService.getUserData();
+        console.log('User data from ChatService:', userData);
+        
+        if (userData && userData.length > 0) {
+          const profile = userData[0];
+          const name = profile.name?.[0] || 'User';
+          const savings = Number(profile.savings?.[0] || profile.savings) || 0;
+          const debt = Number(profile.debt?.[0] || profile.debt) || 0;
+          const riskTolerance = profile.riskTolerance?.[0] || 'moderate';
+          const country = profile.country?.[0] || 'India';
+          const language = profile.language?.[0] || 'default';
+          const lifeStage = profile.lifeStage?.[0] || 'adult';
+          const goals = profile.goals || [];
+
+          setUserProfile({
+            name,
+            savings,
+            debt,
+            riskTolerance,
+            country,
+            language,
+            lifeStage,
+            goals
+          });
+
+          // Get current financial data for context
+          const financialData = financialDataService.getFinancialData();
+          const netWorth = financialDataService.getNetWorth();
+          console.log('Financial data loaded for therapy chat:', {
+            financialData,
+            netWorth,
+            totalAssets: financialData.totalAssets,
+            totalLiabilities: financialData.totalLiabilities
+          });
+        } else {
+          // No user profile found, show onboarding prompt
+          setShowOnboardingPrompt(true);
+        }
+      } else {
+        // No onboarding data - show prompt to complete onboarding
+        setShowOnboardingPrompt(true);
       }
 
       // Load chat history
-      const chatHistory = await chatService.getChatHistory();
-      if (chatHistory && chatHistory.length > 0) {
-        const formattedMessages = chatHistory.map((msg, index) => ({
-          id: index + 2, // Start after welcome message
-          type: msg.messageType === 'user' ? 'user' : 'bot',
-          content: msg.content,
-          timestamp: new Date(Number(msg.timestamp) / 1000000), // Convert from nanoseconds
-          emotion: msg.emotion?.[0] || 'neutral'
-        }));
-        setMessages(prev => [...prev, ...formattedMessages]);
+      try {
+        const chatHistory = await chatService.getChatHistory();
+        if (chatHistory && chatHistory.length > 0) {
+          const formattedMessages = chatHistory.map((msg, index) => ({
+            id: index + 2, // Start after welcome message
+            type: msg.messageType === 'user' ? 'user' : 'bot',
+            content: msg.content,
+            timestamp: new Date(Number(msg.timestamp) / 1000000), // Convert from nanoseconds
+            emotion: msg.emotion?.[0] || 'neutral'
+          }));
+          setMessages(prev => [...prev, ...formattedMessages]);
+        }
+      } catch (chatError) {
+        console.error('Failed to load chat history:', chatError);
+        // Continue without chat history
       }
     } catch (error) {
       console.error('Failed to load user data:', error);
     }
+  };
+
+  const handleRedirectToOnboarding = () => {
+    // Redirect to dashboard where onboarding modal will appear
+    window.location.href = '/emotional-financial-dashboard';
   };
 
   const scrollToBottom = () => {
@@ -118,7 +190,34 @@ const AIFinancialTherapyChat = () => {
     setIsLoading(true);
 
     try {
-      const response = await chatService.processChat(messageToProcess, userProfile);
+      // Get current financial data for context
+      const financialData = financialDataService.getFinancialData();
+      const netWorth = financialDataService.getNetWorth();
+      
+      console.log('Current financial data for chat context:', {
+        totalAssets: financialData.totalAssets,
+        totalLiabilities: financialData.totalLiabilities,
+        netWorth: netWorth,
+        userProfile: userProfile
+      });
+      
+      // Create enhanced user profile with current financial data
+      const enhancedProfile = {
+        ...userProfile,
+        currentAssets: financialData.totalAssets,
+        currentLiabilities: financialData.totalLiabilities,
+        netWorth: netWorth,
+        recentTransactions: financialData.incomeEntries.slice(0, 5).concat(financialData.expenseEntries.slice(0, 5))
+      };
+
+      // Pass recent conversation history (last 6 messages) for context
+      const recentHistory = messages.slice(-6).map(m => ({
+        role: m.type === 'user' ? 'user' : 'bot',
+        content: m.content,
+        emotion: m.emotion || undefined,
+        timestamp: m.timestamp
+      }));
+      const response = await chatService.processChat(messageToProcess, enhancedProfile, recentHistory);
 
       const botMessage = {
         id: Date.now() + 1,
@@ -216,6 +315,55 @@ const AIFinancialTherapyChat = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-teal-50 to-blue-50">
+      {showOnboardingPrompt && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Hey User, Complete Your Profile</h2>
+              <p className="text-sm text-gray-600 mb-6">
+                To provide personalized financial therapy, We need to know about your financial situation. 
+                Please complete the onboarding process first.
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowOnboardingPrompt(false)}
+                  className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  Maybe Later
+                </button>
+                <button 
+                  onClick={handleRedirectToOnboarding}
+                  className="flex-1 px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700"
+                >
+                  Complete Setup
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Debug Info - Remove this in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 m-4 rounded">
+          <div className="text-sm">
+            <strong>Debug Info:</strong>
+            <br />
+            User Profile: {JSON.stringify(userProfile, null, 2)}
+            <br />
+            Financial Data: {JSON.stringify(financialDataService.getFinancialData(), null, 2)}
+            <br />
+            Net Worth: {financialDataService.getNetWorth()}
+            <br />
+            Has Onboarding: {financialDataService.hasOnboardingData() ? 'Yes' : 'No'}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200 p-4">
         <div className="flex items-center justify-between">

@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Icon from '../../../components/AppIcon';
+import { expenseService } from '../../../services/ExpenseService';
+import { incomeService } from '../../../services/IncomeService';
+import billService from '../../../services/BillService';
 
 const RecentTransactions = ({ 
   emotionalState = 'calm',
   culturalContext = 'default',
+  refreshTrigger = 0,
   className = '' 
 }) => {
   const [transactions, setTransactions] = useState([]);
@@ -12,110 +16,88 @@ const RecentTransactions = ({
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    // Simulate loading and data fetch
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      // Mock transaction data with emotional context
-      const mockTransactions = [
-        {
-          id: 1,
+    (async () => {
+      try {
+        setIsLoading(true);
+        
+        // Load expenses
+        const backendExpenses = await expenseService.getExpenses();
+        const expenseTransactions = backendExpenses.map(e => ({
+          id: `expense_${e.id}`,
           type: 'expense',
-          category: 'food',
-          merchant: 'Zomato',
-          amount: 450,
-          date: new Date(2024, 7, 15, 14, 30),
-          mood: 'stressed',
-          moodScore: 3,
-          description: 'Lunch order during work stress',
-          icon: 'UtensilsCrossed',
-          color: 'text-orange-500'
-        },
-        {
-          id: 2,
+          category: e.category,
+          merchant: e.title || e.category,
+          amount: Number(e.amount),
+          date: new Date(e.date),
+          mood: e.emotion || (Number(e.amount) > 10000 ? 'stressed' : 'calm'),
+          moodScore: e.emotion === 'stressed' ? 3 : e.emotion === 'calm' ? 7 : 5,
+          description: e.title,
+          icon: categoryToIcon(e.category),
+          color: categoryToColor(e.category)
+        }));
+
+        // Load incomes
+        const backendIncomes = await incomeService.getIncomes();
+        const incomeTransactions = backendIncomes.map(i => ({
+          id: `income_${i.id}`,
           type: 'income',
-          category: 'salary',
-          merchant: 'Tech Corp Ltd',
-          amount: 85000,
-          date: new Date(2024, 7, 15, 9, 0),
-          mood: 'positive',
-          moodScore: 8,
-          description: 'Monthly salary credit',
-          icon: 'Banknote',
-          color: 'text-success'
-        },
-        {
-          id: 3,
-          type: 'expense',
-          category: 'shopping',
-          merchant: 'Amazon',
-          amount: 2340,
-          date: new Date(2024, 7, 14, 20, 15),
-          mood: 'positive',
-          moodScore: 7,
-          description: 'Festival shopping - Diwali preparations',
-          icon: 'ShoppingBag',
-          color: 'text-purple-500'
-        },
-        {
-          id: 4,
-          type: 'expense',
-          category: 'transport',
-          merchant: 'Uber',
-          amount: 180,
-          date: new Date(2024, 7, 14, 18, 45),
-          mood: 'calm',
-          moodScore: 6,
-          description: 'Ride home from office',
-          icon: 'Car',
-          color: 'text-blue-500'
-        },
-        {
-          id: 5,
-          type: 'expense',
-          category: 'entertainment',
-          merchant: 'BookMyShow',
-          amount: 800,
-          date: new Date(2024, 7, 13, 19, 30),
-          mood: 'positive',
-          moodScore: 8,
-          description: 'Movie tickets with family',
-          icon: 'Film',
-          color: 'text-pink-500'
-        },
-        {
-          id: 6,
-          type: 'expense',
-          category: 'food',
-          merchant: 'Swiggy',
-          amount: 650,
-          date: new Date(2024, 7, 13, 21, 0),
-          mood: 'stressed',
-          moodScore: 4,
-          description: 'Late night comfort food order',
-          icon: 'UtensilsCrossed',
-          color: 'text-orange-500'
-        }
-      ];
-      
-      setTransactions(mockTransactions);
-      
-      // Calculate mood patterns
-      const patterns = mockTransactions?.reduce((acc, transaction) => {
-        if (transaction?.type === 'expense') {
-          if (!acc?.[transaction?.mood]) {
-            acc[transaction.mood] = { count: 0, total: 0 };
-          }
-          acc[transaction.mood].count++;
-          acc[transaction.mood].total += transaction?.amount;
-        }
-        return acc;
-      }, {});
-      
-      setMoodPatterns(patterns);
-      setIsLoading(false);
-    }, 600);
-  }, []);
+          category: i.source,
+          merchant: i.source,
+          amount: Number(i.amount),
+          date: new Date(i.timestamp),
+          mood: i.emotion || 'positive',
+          moodScore: i.emotion === 'positive' ? 8 : 6,
+          description: i.description || i.source,
+          icon: 'TrendingUp',
+          color: 'text-green-600'
+        }));
+
+        // Load paid bills
+        const paidBills = billService.getPaidBills();
+        const billTransactions = paidBills.map(b => ({
+          id: `bill_${b.id}`,
+          type: 'bill_payment',
+          category: b.category,
+          merchant: b.billName,
+          amount: Number(b.amount),
+          date: new Date(b.paidDate),
+          mood: b.emotion || 'neutral',
+          moodScore: b.emotion === 'stressed' ? 3 : b.emotion === 'calm' ? 7 : 5,
+          description: `Bill Payment: ${b.billName}`,
+          icon: 'CreditCard',
+          color: 'text-blue-600'
+        }));
+
+        // Combine all transactions
+        const allTransactions = [...expenseTransactions, ...incomeTransactions, ...billTransactions]
+          .sort((a, b) => b.date - a.date)
+          .slice(0, 20);
+
+        setTransactions(allTransactions);
+        
+        // Calculate mood patterns
+        const patterns = allTransactions.reduce((acc, t) => {
+          if (!acc[t.mood]) acc[t.mood] = { count: 0, total: 0 };
+          acc[t.mood].count += 1;
+          acc[t.mood].total += t.amount;
+          return acc;
+        }, {});
+        setMoodPatterns(patterns);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [refreshTrigger]);
+
+  function categoryToIcon(cat) {
+    const map = { food: 'UtensilsCrossed', shopping: 'ShoppingBag', transport: 'Car', entertainment: 'Film', healthcare: 'HeartPulse' };
+    return map[cat] || 'Receipt';
+  }
+
+  function categoryToColor(cat) {
+    const map = { food: 'text-orange-500', shopping: 'text-purple-500', transport: 'text-blue-500', entertainment: 'text-pink-500', healthcare: 'text-red-500' };
+    return map[cat] || 'text-primary';
+  }
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
@@ -170,7 +152,8 @@ const RecentTransactions = ({
   const filterOptions = [
     { value: 'all', label: culturalContext === 'hindi' ? 'सभी' : 'All' },
     { value: 'income', label: culturalContext === 'hindi' ? 'आय' : 'Income' },
-    { value: 'expense', label: culturalContext === 'hindi' ? 'खर्च' : 'Expenses' }
+    { value: 'expense', label: culturalContext === 'hindi' ? 'खर्च' : 'Expenses' },
+    { value: 'bill_payment', label: culturalContext === 'hindi' ? 'बिल भुगतान' : 'Bill Payments' }
   ];
 
   if (isLoading) {
@@ -281,7 +264,9 @@ const RecentTransactions = ({
             {/* Amount */}
             <div className="text-right">
               <p className={`text-sm font-bold ${
-                transaction?.type === 'income' ? 'text-success' : 'text-foreground'
+                transaction?.type === 'income' ? 'text-success' : 
+                transaction?.type === 'bill_payment' ? 'text-blue-600' : 
+                'text-foreground'
               }`}>
                 {transaction?.type === 'income' ? '+' : '-'}{formatCurrency(transaction?.amount)}
               </p>

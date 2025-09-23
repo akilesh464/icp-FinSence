@@ -5,6 +5,7 @@ import Button from '../../../components/ui/Button';
 
 const EmotionalAnalysisPanel = ({ 
   expenses = [], 
+  incomes = [],
   culturalContext = 'default',
   className = '' 
 }) => {
@@ -13,37 +14,53 @@ const EmotionalAnalysisPanel = ({
   const [timeRange, setTimeRange] = useState('month');
 
   useEffect(() => {
-    analyzeExpenseData();
-  }, [expenses, timeRange]);
+    analyzeFinancialData();
+  }, [expenses, incomes, timeRange]);
 
-  const analyzeExpenseData = () => {
-    if (!expenses?.length) return;
+  const analyzeFinancialData = () => {
+    try {
+      if (!expenses?.length && !incomes?.length) return;
 
-    // Filter expenses by time range
-    const now = new Date();
-    const filteredExpenses = expenses?.filter(expense => {
-      const expenseDate = new Date(expense.timestamp);
-      const diffTime = now - expenseDate;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      switch (timeRange) {
-        case 'week':
-          return diffDays <= 7;
-        case 'month':
-          return diffDays <= 30;
-        case 'quarter':
-          return diffDays <= 90;
-        default:
-          return true;
-      }
-    });
+      // Filter data by time range
+      const now = new Date();
+      const filterByTimeRange = (items) => {
+        if (!items || !Array.isArray(items)) return [];
+        return items.filter(item => {
+          try {
+            const itemDate = new Date(item.timestamp);
+            const diffTime = now - itemDate;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            switch (timeRange) {
+              case 'week':
+                return diffDays <= 7;
+              case 'month':
+                return diffDays <= 30;
+              case 'quarter':
+                return diffDays <= 90;
+              default:
+                return true;
+            }
+          } catch (error) {
+            console.warn('Error filtering item:', error);
+            return false;
+          }
+        });
+      };
 
-    // Emotion-based spending analysis
+    const filteredExpenses = filterByTimeRange(expenses);
+    const filteredIncomes = filterByTimeRange(incomes);
+
+    // Combined financial analysis
     const emotionSpending = {};
+    const emotionIncome = {};
     const categoryEmotionMap = {};
+    const sourceEmotionMap = {};
     const dailyEmotionalSpending = {};
+    const dailyEmotionalIncome = {};
     const triggerPatterns = {};
 
+    // Analyze expenses
     filteredExpenses?.forEach(expense => {
       const emotion = expense?.emotion;
       const category = expense?.category;
@@ -72,45 +89,102 @@ const EmotionalAnalysisPanel = ({
       }
     });
 
+    // Analyze incomes
+    filteredIncomes?.forEach(income => {
+      const emotion = income?.emotion;
+      const source = income?.source;
+      const amount = Number(income?.amount) || 0;
+      const date = new Date(income.timestamp)?.toDateString();
+
+      // Emotion income totals
+      emotionIncome[emotion] = (emotionIncome?.[emotion] || 0) + amount;
+
+      // Source-emotion mapping
+      if (!sourceEmotionMap?.[source]) {
+        sourceEmotionMap[source] = {};
+      }
+      sourceEmotionMap[source][emotion] = (sourceEmotionMap?.[source]?.[emotion] || 0) + amount;
+
+      // Daily emotional income
+      if (!dailyEmotionalIncome?.[date]) {
+        dailyEmotionalIncome[date] = {};
+      }
+      dailyEmotionalIncome[date][emotion] = (dailyEmotionalIncome?.[date]?.[emotion] || 0) + amount;
+    });
+
     // Calculate insights
     const totalSpending = filteredExpenses?.reduce((sum, expense) => sum + expense?.amount, 0);
+    const totalIncome = filteredIncomes?.reduce((sum, income) => sum + income?.amount, 0);
+    const netWorth = totalIncome - totalSpending;
+    
     const emotionalSpending = filteredExpenses?.filter(expense => ['stressed', 'anxious', 'sad', 'angry']?.includes(expense?.emotion))?.reduce((sum, expense) => sum + expense?.amount, 0);
+    const emotionalIncome = filteredIncomes?.filter(income => ['happy', 'grateful', 'proud', 'excited', 'motivated']?.includes(income?.emotion))?.reduce((sum, income) => sum + income?.amount, 0);
     
     const emotionalSpendingPercentage = totalSpending > 0 ? (emotionalSpending / totalSpending) * 100 : 0;
+    const emotionalIncomePercentage = totalIncome > 0 ? (emotionalIncome / totalIncome) * 100 : 0;
 
     // Most expensive emotion
     const mostExpensiveEmotion = Object.entries(emotionSpending)?.sort(([,a], [,b]) => b - a)?.[0];
+    const mostPositiveIncomeEmotion = Object.entries(emotionIncome)?.sort(([,a], [,b]) => b - a)?.[0];
 
-    // Spending patterns by day of week
+    // Financial patterns by day of week
     const dayOfWeekSpending = {};
+    const dayOfWeekIncome = {};
+    
     filteredExpenses?.forEach(expense => {
       const dayOfWeek = new Date(expense.timestamp)?.getDay();
       const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']?.[dayOfWeek];
       dayOfWeekSpending[dayName] = (dayOfWeekSpending?.[dayName] || 0) + expense?.amount;
     });
 
+    filteredIncomes?.forEach(income => {
+      const dayOfWeek = new Date(income.timestamp)?.getDay();
+      const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']?.[dayOfWeek];
+      dayOfWeekIncome[dayName] = (dayOfWeekIncome?.[dayName] || 0) + income?.amount;
+    });
+
     setAnalysisData({
       emotionSpending,
+      emotionIncome,
       categoryEmotionMap,
+      sourceEmotionMap,
       dailyEmotionalSpending,
+      dailyEmotionalIncome,
       triggerPatterns,
       totalSpending,
+      totalIncome,
+      netWorth,
       emotionalSpending,
+      emotionalIncome,
       emotionalSpendingPercentage,
+      emotionalIncomePercentage,
       mostExpensiveEmotion,
+      mostPositiveIncomeEmotion,
       dayOfWeekSpending,
-      expenseCount: filteredExpenses?.length
+      dayOfWeekIncome,
+      expenseCount: filteredExpenses?.length,
+      incomeCount: filteredIncomes?.length
     });
+    } catch (error) {
+      console.error('Error analyzing financial data:', error);
+      setAnalysisData({});
+    }
   };
 
   const formatIndianNumber = (amount) => {
-    const numStr = Math.round(amount)?.toString();
-    const lastThree = numStr?.substring(numStr?.length - 3);
-    const otherNumbers = numStr?.substring(0, numStr?.length - 3);
-    if (otherNumbers !== '') {
-      return otherNumbers?.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + lastThree;
-    } else {
-      return lastThree;
+    try {
+      if (!amount || isNaN(amount)) return '0';
+      const numStr = Math.round(Number(amount)).toString();
+      const lastThree = numStr.substring(numStr.length - 3);
+      const otherNumbers = numStr.substring(0, numStr.length - 3);
+      if (otherNumbers !== '') {
+        return otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + lastThree;
+      } else {
+        return lastThree;
+      }
+    } catch (error) {
+      console.warn('Error formatting number:', error);
+      return '0';
     }
   };
 
@@ -129,14 +203,31 @@ const EmotionalAnalysisPanel = ({
   };
 
   const getEmotionChartData = () => {
-    if (!analysisData?.emotionSpending) return [];
+    if (!analysisData?.emotionSpending && !analysisData?.emotionIncome) return [];
     
-    return Object.entries(analysisData?.emotionSpending)?.map(([emotion, amount]) => ({
-      emotion: culturalContext === 'hindi' ? getHindiEmotionLabel(emotion) : emotion,
-      amount,
-      percentage: analysisData?.totalSpending > 0 ? (amount / analysisData?.totalSpending) * 100 : 0,
-      fill: getEmotionColor(emotion)
-    }));
+    // Combine spending and income emotions
+    const allEmotions = new Set([
+      ...Object.keys(analysisData?.emotionSpending || {}),
+      ...Object.keys(analysisData?.emotionIncome || {})
+    ]);
+    
+    const chartData = Array.from(allEmotions).map(emotion => {
+      const spending = analysisData?.emotionSpending?.[emotion] || 0;
+      const income = analysisData?.emotionIncome?.[emotion] || 0;
+      const total = spending + income;
+      
+      return {
+        emotion: culturalContext === 'hindi' ? getHindiEmotionLabel(emotion) : emotion,
+        spending,
+        income,
+        total,
+        percentage: (analysisData?.totalSpending + analysisData?.totalIncome) > 0 
+          ? (total / (analysisData?.totalSpending + analysisData?.totalIncome)) * 100 : 0,
+        fill: getEmotionColor(emotion)
+      };
+    }).filter(item => item.total > 0); // Only include items with actual data
+    
+    return chartData;
   };
 
   const getHindiEmotionLabel = (emotion) => {
@@ -154,12 +245,14 @@ const EmotionalAnalysisPanel = ({
   };
 
   const getDayOfWeekChartData = () => {
-    if (!analysisData?.dayOfWeekSpending) return [];
+    if (!analysisData?.dayOfWeekSpending && !analysisData?.dayOfWeekIncome) return [];
     
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     return days?.map(day => ({
       day: culturalContext === 'hindi' ? getHindiDayLabel(day) : day?.substring(0, 3),
-      amount: analysisData?.dayOfWeekSpending?.[day] || 0
+      spending: analysisData?.dayOfWeekSpending?.[day] || 0,
+      income: analysisData?.dayOfWeekIncome?.[day] || 0,
+      net: (analysisData?.dayOfWeekIncome?.[day] || 0) - (analysisData?.dayOfWeekSpending?.[day] || 0)
     }));
   };
 
@@ -179,6 +272,28 @@ const EmotionalAnalysisPanel = ({
   const getInsights = () => {
     const insights = [];
     
+    // Net worth insight
+    if (analysisData?.netWorth > 0) {
+      insights?.push({
+        type: 'success',
+        title: culturalContext === 'hindi' ? 'सकारात्मक नेट वर्थ' : 'Positive Net Worth',
+        description: culturalContext === 'hindi' 
+          ? `आपका नेट वर्थ ₹${formatIndianNumber(analysisData?.netWorth)} है।`
+          : `Your net worth is ₹${formatIndianNumber(analysisData?.netWorth)}.`,
+        icon: 'TrendingUp'
+      });
+    } else if (analysisData?.netWorth < 0) {
+      insights?.push({
+        type: 'warning',
+        title: culturalContext === 'hindi' ? 'नकारात्मक नेट वर्थ' : 'Negative Net Worth',
+        description: culturalContext === 'hindi' 
+          ? `आपका नेट वर्थ ₹${formatIndianNumber(Math.abs(analysisData?.netWorth))} नकारात्मक है।`
+          : `Your net worth is ₹${formatIndianNumber(Math.abs(analysisData?.netWorth))} negative.`,
+        icon: 'AlertTriangle'
+      });
+    }
+
+    // Emotional spending insight
     if (analysisData?.emotionalSpendingPercentage > 40) {
       insights?.push({
         type: 'warning',
@@ -190,6 +305,19 @@ const EmotionalAnalysisPanel = ({
       });
     }
 
+    // Positive income emotion insight
+    if (analysisData?.emotionalIncomePercentage > 70) {
+      insights?.push({
+        type: 'success',
+        title: culturalContext === 'hindi' ? 'सकारात्मक आय भावना' : 'Positive Income Emotion',
+        description: culturalContext === 'hindi' 
+          ? `आपकी ${analysisData?.emotionalIncomePercentage?.toFixed(1)}% आय सकारात्मक भावनाओं से जुड़ी है।`
+          : `${analysisData?.emotionalIncomePercentage?.toFixed(1)}% of your income is from positive emotions.`,
+        icon: 'Heart'
+      });
+    }
+
+    // Most expensive emotion insight
     if (analysisData?.mostExpensiveEmotion && analysisData?.mostExpensiveEmotion?.[0] !== 'calm') {
       insights?.push({
         type: 'info',
@@ -197,10 +325,23 @@ const EmotionalAnalysisPanel = ({
         description: culturalContext === 'hindi' 
           ? `आप सबसे ज्यादा ${getHindiEmotionLabel(analysisData?.mostExpensiveEmotion?.[0])} में खर्च करते हैं।`
           : `You spend most when feeling ${analysisData?.mostExpensiveEmotion?.[0]}.`,
+        icon: 'TrendingDown'
+      });
+    }
+
+    // Most positive income emotion insight
+    if (analysisData?.mostPositiveIncomeEmotion) {
+      insights?.push({
+        type: 'info',
+        title: culturalContext === 'hindi' ? 'मुख्य आय भावना' : 'Primary Income Emotion',
+        description: culturalContext === 'hindi' 
+          ? `आप सबसे ज्यादा ${getHindiEmotionLabel(analysisData?.mostPositiveIncomeEmotion?.[0])} में आय प्राप्त करते हैं।`
+          : `You earn most when feeling ${analysisData?.mostPositiveIncomeEmotion?.[0]}.`,
         icon: 'TrendingUp'
       });
     }
 
+    // Trigger pattern insight
     if (Object.keys(analysisData?.triggerPatterns || {})?.length > 0) {
       const topTrigger = Object.entries(analysisData?.triggerPatterns)?.sort(([,a], [,b]) => b - a)?.[0];
       
@@ -279,16 +420,16 @@ const EmotionalAnalysisPanel = ({
         {selectedView === 'overview' ? (
           <div className="space-y-6">
             {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
                 <div className="flex items-center space-x-3">
-                  <Icon name="TrendingUp" size={20} className="text-blue-600" />
+                  <Icon name="TrendingUp" size={20} className="text-green-600" />
                   <div>
-                    <p className="text-sm text-blue-600 font-medium">
-                      {culturalContext === 'hindi' ? 'कुल खर्च' : 'Total Spending'}
+                    <p className="text-sm text-green-600 font-medium">
+                      {culturalContext === 'hindi' ? 'कुल आय' : 'Total Income'}
                     </p>
-                    <p className="text-lg font-bold text-blue-800">
-                      ₹{formatIndianNumber(analysisData?.totalSpending || 0)}
+                    <p className="text-lg font-bold text-green-800">
+                      ₹{formatIndianNumber(analysisData?.totalIncome || 0)}
                     </p>
                   </div>
                 </div>
@@ -296,27 +437,51 @@ const EmotionalAnalysisPanel = ({
 
               <div className="p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border border-red-200">
                 <div className="flex items-center space-x-3">
-                  <Icon name="AlertTriangle" size={20} className="text-red-600" />
+                  <Icon name="TrendingDown" size={20} className="text-red-600" />
                   <div>
                     <p className="text-sm text-red-600 font-medium">
-                      {culturalContext === 'hindi' ? 'भावनात्मक खर्च' : 'Emotional Spending'}
+                      {culturalContext === 'hindi' ? 'कुल खर्च' : 'Total Spending'}
                     </p>
                     <p className="text-lg font-bold text-red-800">
-                      {analysisData?.emotionalSpendingPercentage?.toFixed(1) || 0}%
+                      ₹{formatIndianNumber(analysisData?.totalSpending || 0)}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+              <div className={`p-4 rounded-lg border ${
+                (analysisData?.netWorth || 0) >= 0 
+                  ? 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200' 
+                  : 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200'
+              }`}>
                 <div className="flex items-center space-x-3">
-                  <Icon name="Receipt" size={20} className="text-green-600" />
+                  <Icon name="DollarSign" size={20} className={
+                    (analysisData?.netWorth || 0) >= 0 ? 'text-blue-600' : 'text-orange-600'
+                  } />
                   <div>
-                    <p className="text-sm text-green-600 font-medium">
+                    <p className={`text-sm font-medium ${
+                      (analysisData?.netWorth || 0) >= 0 ? 'text-blue-600' : 'text-orange-600'
+                    }`}>
+                      {culturalContext === 'hindi' ? 'नेट वर्थ' : 'Net Worth'}
+                    </p>
+                    <p className={`text-lg font-bold ${
+                      (analysisData?.netWorth || 0) >= 0 ? 'text-blue-800' : 'text-orange-800'
+                    }`}>
+                      ₹{formatIndianNumber(analysisData?.netWorth || 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                <div className="flex items-center space-x-3">
+                  <Icon name="Receipt" size={20} className="text-purple-600" />
+                  <div>
+                    <p className="text-sm text-purple-600 font-medium">
                       {culturalContext === 'hindi' ? 'कुल लेनदेन' : 'Total Transactions'}
                     </p>
-                    <p className="text-lg font-bold text-green-800">
-                      {analysisData?.expenseCount || 0}
+                    <p className="text-lg font-bold text-purple-800">
+                      {(analysisData?.expenseCount || 0) + (analysisData?.incomeCount || 0)}
                     </p>
                   </div>
                 </div>
@@ -359,56 +524,80 @@ const EmotionalAnalysisPanel = ({
         ) : (
           <div className="space-y-8">
             {/* Emotion-based Spending Chart */}
-            {emotionChartData?.length > 0 && (
+            {emotionChartData && emotionChartData.length > 0 && (
               <div>
                 <h3 className="text-base font-medium text-foreground mb-4">
                   {culturalContext === 'hindi' ? 'भावना के आधार पर खर्च' : 'Spending by Emotion'}
                 </h3>
                 <div className="h-64">
-
-                  console.log(emotionChartData);
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={emotionChartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={5}
-                        dataKey="amount"
-                      >
-                        {emotionChartData?.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry?.fill} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(value) => [`₹${formatIndianNumber(value)}`, culturalContext === 'hindi' ? 'राशि' : 'Amount']}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {(() => {
+                    try {
+                      return (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={emotionChartData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={100}
+                              paddingAngle={5}
+                              dataKey="total"
+                            >
+                              {emotionChartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill || '#6B7280'} />
+                              ))}
+                            </Pie>
+                            <Tooltip 
+                              formatter={(value) => [`₹${formatIndianNumber(value)}`, culturalContext === 'hindi' ? 'राशि' : 'Amount']}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      );
+                    } catch (error) {
+                      console.error('Chart rendering error:', error);
+                      return (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          {culturalContext === 'hindi' ? 'चार्ट लोड नहीं हो सका' : 'Chart could not be loaded'}
+                        </div>
+                      );
+                    }
+                  })()}
                 </div>
               </div>
             )}
 
             {/* Day of Week Spending */}
-            {dayChartData?.length > 0 && (
+            {dayChartData && dayChartData.length > 0 && (
               <div>
                 <h3 className="text-base font-medium text-foreground mb-4">
                   {culturalContext === 'hindi' ? 'सप्ताह के दिन के अनुसार खर्च' : 'Spending by Day of Week'}
                 </h3>
                 <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dayChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                      <XAxis dataKey="day" stroke="#6B7280" />
-                      <YAxis stroke="#6B7280" />
-                      <Tooltip 
-                        formatter={(value) => [`₹${formatIndianNumber(value)}`, culturalContext === 'hindi' ? 'राशि' : 'Amount']}
-                      />
-                      <Bar dataKey="amount" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {(() => {
+                    try {
+                      return (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={dayChartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                            <XAxis dataKey="day" stroke="#6B7280" />
+                            <YAxis stroke="#6B7280" />
+                            <Tooltip 
+                              formatter={(value) => [`₹${formatIndianNumber(value)}`, culturalContext === 'hindi' ? 'राशि' : 'Amount']}
+                            />
+                            <Bar dataKey="spending" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      );
+                    } catch (error) {
+                      console.error('Bar chart rendering error:', error);
+                      return (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          {culturalContext === 'hindi' ? 'चार्ट लोड नहीं हो सका' : 'Chart could not be loaded'}
+                        </div>
+                      );
+                    }
+                  })()}
                 </div>
               </div>
             )}

@@ -1,17 +1,19 @@
-// index.jsx for tracker
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import EmotionalHeader from '../../components/ui/EmotionalHeader';
 import VoiceAssistantToggle from '../../components/ui/VoiceAssistantToggle';
 import CrisisInterventionOverlay from '../../components/ui/CrisisInterventionOverlay';
 import CulturalContextIndicator from '../../components/ui/CulturalContextIndicator';
-import QuickExpenseEntry from './components/QuickExpenseEntry';
-import ExpenseTimeline from './components/ExpenseTimeline';
+import UnifiedFinancialEntry from './components/UnifiedFinancialEntry';
+import CombinedFinancialTimeline from './components/CombinedFinancialTimeline';
 import EmotionalAnalysisPanel from './components/EmotionalAnalysisPanel';
 import PredictiveAlerts from './components/PredictiveAlerts';
+import { expenseService } from '../../services/ExpenseService';
+import { incomeService } from '../../services/IncomeService';
 
 const ExpenseTrackingEmotionalAnalysis = () => {
   const [expenses, setExpenses] = useState([]);
+  const [incomes, setIncomes] = useState([]);
   const [culturalContext, setCulturalContext] = useState('default');
   const [emotionalState, setEmotionalState] = useState('calm');
   const [isVoiceActive, setIsVoiceActive] = useState(false);
@@ -26,8 +28,9 @@ const ExpenseTrackingEmotionalAnalysis = () => {
     setCulturalContext(savedContext);
     setEmotionalState(savedEmotionalState);
     
-    // Load mock expense data
-    loadMockExpenses();
+    // Load expenses and incomes
+    loadExpenses();
+    loadIncomes();
     
     // Listen for crisis intervention trigger
     const handleCrisisEvent = () => setShowCrisisOverlay(true);
@@ -38,140 +41,55 @@ const ExpenseTrackingEmotionalAnalysis = () => {
     };
   }, []);
 
-  const loadMockExpenses = () => {
+  const loadExpenses = async () => {
     setIsLoading(true);
     
-    // Simulate loading delay
-    setTimeout(() => {
-      const mockExpenses = [
-        {
-          id: 1,
-          amount: 2500,
-          category: 'food',
-          description: culturalContext === 'hindi' ? 'रेस्टोरेंट में डिनर' : 'Dinner at restaurant',
-          emotion: 'happy',
-          voiceNote: culturalContext === 'hindi' ? 'दोस्तों के साथ अच्छा समय बिताया' : 'Had a great time with friends',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-          culturalContext
-        },
-        {
-          id: 2,
-          amount: 15000,
-          category: 'festival',
-          description: culturalContext === 'hindi' ? 'दिवाली की खरीदारी' : 'Diwali shopping',
-          emotion: 'excited',
-          voiceNote: culturalContext === 'hindi' ? 'त्योहार की तैयारी' : 'Festival preparations',
-          timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-          culturalContext
-        },
-        {
-          id: 3,
-          amount: 8000,
-          category: 'family',
-          description: culturalContext === 'hindi' ? 'माता जी के लिए दवाई' : 'Medicine for mother',
-          emotion: 'stressed',
-          voiceNote: culturalContext === 'hindi' ? 'माँ की तबीयत खराब है' : 'Mother is not feeling well',
-          timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-          culturalContext
-        },
-        {
-          id: 4,
-          amount: 3200,
-          category: 'transport',
-          description: culturalContext === 'hindi' ? 'ऑटो रिक्शा और पेट्रोल' : 'Auto rickshaw and petrol',
-          emotion: 'calm',
-          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-          culturalContext
-        },
-        {
-          id: 5,
-          amount: 12000,
-          category: 'shopping',
-          description: culturalContext === 'hindi' ? 'नए कपड़े खरीदे' : 'Bought new clothes',
-          emotion: 'guilty',
-          voiceNote: culturalContext === 'hindi' ? 'जरूरत से ज्यादा खर्च किया' : 'Spent more than needed',
-          timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), // 4 days ago
-          culturalContext
-        },
-        {
-          id: 6,
-          amount: 5500,
-          category: 'healthcare',
-          description: culturalContext === 'hindi' ? 'डॉक्टर की फीस' : 'Doctor consultation fee',
-          emotion: 'anxious',
-          timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-          culturalContext
-        },
-        {
-          id: 7,
-          amount: 1800,
-          category: 'entertainment',
-          description: culturalContext === 'hindi' ? 'मूवी टिकट' : 'Movie tickets',
-          emotion: 'happy',
-          timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000), // 6 days ago
-          culturalContext
-        },
-        {
-          id: 8,
-          amount: 25000,
-          category: 'traditional',
-          description: culturalContext === 'hindi' ? 'सोने के गहने' : 'Gold jewelry',
-          emotion: 'excited',
-          voiceNote: culturalContext === 'hindi' ? 'धनतेरस के लिए सोना खरीदा' : 'Bought gold for Dhanteras',
-          timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-          culturalContext
-        },
-        {
-          id: 9,
-          amount: 4200,
-          category: 'utilities',
-          description: culturalContext === 'hindi' ? 'बिजली का बिल' : 'Electricity bill',
-          emotion: 'stressed',
-          timestamp: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000), // 8 days ago
-          culturalContext
-        },
-        {
-          id: 10,
-          amount: 7500,
-          category: 'education',
-          description: culturalContext === 'hindi' ? 'ऑनलाइन कोर्स' : 'Online course',
-          emotion: 'calm',
-          timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
-          culturalContext
-        }
-      ];
+    try {
+      const backendExpenses = await expenseService.getExpenses();
       
-      setExpenses(mockExpenses);
+      if (backendExpenses && backendExpenses.length > 0) {
+        const formattedExpenses = backendExpenses.map(expense => ({
+          id: expense.id,
+          title: expense.title,
+          amount: Number(expense.amount),
+          category: expense.category,
+          timestamp: new Date(expense.date),
+          emotionalContext: 'neutral'
+        }));
+        setExpenses(formattedExpenses);
+      } else {
+        setExpenses([]);
+      }
+    } catch (error) {
+      console.error('Error loading expenses from backend:', error);
+      setExpenses([]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
-  };
-
-   const handleCrisisEvent = () => setShowCrisisOverlay(true);
-    document.addEventListener('triggerCrisisHelp', handleCrisisEvent);
-    
-    return () => {
-      document.removeEventListener('triggerCrisisHelp', handleCrisisEvent);
-    };
-
-  const handleAddExpense = async (expenseData) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    setExpenses(prev => [expenseData, ...prev]);
-    
-    // Update emotional state based on expense
-    if (['stressed', 'anxious', 'sad', 'angry']?.includes(expenseData?.emotion)) {
-      setEmotionalState('stressed');
-      localStorage.setItem('emotionalState', 'stressed');
-    } else if (['happy', 'excited']?.includes(expenseData?.emotion)) {
-      setEmotionalState('positive');
-      localStorage.setItem('emotionalState', 'positive');
     }
   };
 
-  const handleExpenseClick = (expense) => {
-    // Handle expense detail view or edit
-    console.log('Expense clicked:', expense);
+  const loadIncomes = async () => {
+    try {
+      const backendIncomes = await incomeService.getIncomes();
+      
+      if (backendIncomes && backendIncomes.length > 0) {
+        const formattedIncomes = backendIncomes.map(income => ({
+          id: income.id,
+          amount: Number(income.amount),
+          source: income.source,
+          description: income.description,
+          timestamp: new Date(income.date),
+          emotion: income.emotion,
+          culturalContext
+        }));
+        setIncomes(formattedIncomes);
+      } else {
+        setIncomes([]);
+      }
+    } catch (error) {
+      console.error('Error loading incomes from backend:', error);
+      setIncomes([]);
+    }
   };
 
   const handleVoiceToggle = (isActive) => {
@@ -185,9 +103,125 @@ const ExpenseTrackingEmotionalAnalysis = () => {
   const handleContextChange = (newContext) => {
     setCulturalContext(newContext);
     localStorage.setItem('culturalContext', newContext);
-    
-    // Reload expenses with new context
-    loadMockExpenses();
+  };
+
+  const handleAddExpense = async (expenseData) => {
+    try {
+      // Validate and prepare data
+      const amount = Number(expenseData.amount) || 0;
+      const date = expenseData.timestamp ? expenseData.timestamp.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      const category = expenseData.category || 'other';
+      // Use description if provided, otherwise use category as title
+      const title = expenseData.description?.trim() || expenseData.title || category;
+      
+      // Validate required fields
+      if (!amount || amount <= 0) {
+        alert(culturalContext === 'hindi' ? 'कृपया वैध राशि दर्ज करें' : 'Please enter a valid amount');
+        return;
+      }
+      
+      if (!category || category === '') {
+        alert(culturalContext === 'hindi' ? 'कृपया श्रेणी चुनें' : 'Please select a category');
+        return;
+      }
+      
+      const backendExpense = await expenseService.addExpense(
+        title,
+        amount,
+        date,
+        category,
+        expenseData.emotion || 'neutral',
+        culturalContext
+      );
+      
+      const newExpense = {
+        id: backendExpense.id,
+        title: backendExpense.title,
+        amount: Number(backendExpense.amount),
+        category: backendExpense.category,
+        timestamp: expenseData.timestamp || new Date(),
+        emotionalContext: expenseData.emotion || 'neutral',
+        emotion: expenseData.emotion || 'neutral',
+        description: expenseData.description,
+        culturalContext: expenseData.culturalContext
+      };
+      
+      setExpenses(prev => [newExpense, ...prev]);
+      
+      // Dispatch event to notify dashboard of transaction update
+      const event = new CustomEvent('transaction-updated', {
+        detail: { type: 'expense', amount: newExpense.amount }
+      });
+      document.dispatchEvent(event);
+      
+      if (['stressed', 'anxious', 'sad', 'angry']?.includes(expenseData?.emotion)) {
+        setEmotionalState('stressed');
+        localStorage.setItem('emotionalState', 'stressed');
+      } else if (['happy', 'excited']?.includes(expenseData?.emotion)) {
+        setEmotionalState('positive');
+        localStorage.setItem('emotionalState', 'positive');
+      }
+    } catch (error) {
+      console.error('Error adding expense to backend:', error);
+      alert(culturalContext === 'hindi' ? 'खर्च जोड़ने में त्रुटि हुई' : 'Error adding expense');
+    }
+  };
+
+  const handleAddIncome = async (incomeData) => {
+    try {
+      // Validate and prepare data
+      const amount = Number(incomeData.amount) || 0;
+      const source = incomeData.source || 'other';
+      const description = incomeData.description || '';
+      const date = incomeData.timestamp ? incomeData.timestamp.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      const emotion = incomeData.emotion || 'neutral';
+      
+      // Validate required fields
+      if (!amount || amount <= 0) {
+        alert(culturalContext === 'hindi' ? 'कृपया वैध राशि दर्ज करें' : 'Please enter a valid amount');
+        return;
+      }
+      
+      if (!source || source === '') {
+        alert(culturalContext === 'hindi' ? 'कृपया स्रोत चुनें' : 'Please select a source');
+        return;
+      }
+      
+      const backendIncome = await incomeService.addIncome(
+        amount,
+        source,
+        description,
+        date,
+        emotion,
+        culturalContext
+      );
+      
+      const newIncome = {
+        id: backendIncome.id,
+        amount: Number(backendIncome.amount),
+        source: backendIncome.source,
+        description: backendIncome.description,
+        timestamp: incomeData.timestamp || new Date(),
+        emotion: incomeData.emotion,
+        culturalContext: incomeData.culturalContext
+      };
+      
+      setIncomes(prev => [newIncome, ...prev]);
+      
+      // Dispatch event to notify dashboard of transaction update
+      const event = new CustomEvent('transaction-updated', {
+        detail: { type: 'income', amount: newIncome.amount }
+      });
+      document.dispatchEvent(event);
+      
+      if (['happy', 'grateful', 'proud', 'excited', 'motivated']?.includes(incomeData?.emotion)) {
+        setEmotionalState('positive');
+        localStorage.setItem('emotionalState', 'positive');
+      }
+    } catch (error) {
+      console.error('Error adding income to backend:', error);
+      alert(culturalContext === 'hindi' ? 'आय जोड़ने में त्रुटि हुई' : 'Error adding income');
+    }
   };
 
   const handleAlertAction = (actionType, alert) => {
@@ -196,20 +230,15 @@ const ExpenseTrackingEmotionalAnalysis = () => {
         setShowCrisisOverlay(true);
         break;
       case 'create_budget':
-        // Navigate to budget creation
         window.location.href = '/cultural-financial-planning';
         break;
       case 'stress_management':
-        // Navigate to therapy chat
         window.location.href = '/ai-financial-therapy-chat';
         break;
       case 'set_spending_limit':
-        // Show spending limit modal
-        alert(culturalContext === 'hindi' ?'खर्च की सीमा सेट करने की सुविधा जल्द आ रही है।' :'Spending limit feature coming soon.'
-        );
+        alert(culturalContext === 'hindi' ?'खर्च की सीमा सेट करने की सुविधा जल्द आ रही है।' :'Spending limit feature coming soon.');
         break;
       case 'family_discussion_guide':
-        // Navigate to cultural planning
         window.location.href = '/cultural-financial-planning';
         break;
       default:
@@ -218,11 +247,11 @@ const ExpenseTrackingEmotionalAnalysis = () => {
   };
 
   const getPageTitle = () => {
-    return culturalContext === 'hindi' ?'खर्च ट्रैकिंग और भावनात्मक विश्लेषण - FinSense AI' :'Expense Tracking & Emotional Analysis - FinSense AI';
+    return culturalContext === 'hindi' ?'आय और खर्च ट्रैकिंग - FinSense AI' :'Income & Expense Tracking - FinSense AI';
   };
 
   const getPageDescription = () => {
-    return culturalContext === 'hindi' ?'अपने खर्च को ट्रैक करें और भावनात्मक पैटर्न को समझें। AI-powered वित्तीय सलाह के साथ बेहतर वित्तीय निर्णय लें।' :'Track your expenses and understand emotional patterns. Make better financial decisions with AI-powered insights and emotional analysis.';
+    return culturalContext === 'hindi' ?'अपनी आय और खर्च को ट्रैक करें और भावनात्मक पैटर्न को समझें। AI-powered वित्तीय सलाह के साथ बेहतर वित्तीय निर्णय लें।' :'Track your income and expenses with emotional analysis. Make better financial decisions with AI-powered insights and comprehensive financial tracking.';
   };
 
   if (isLoading) {
@@ -268,12 +297,12 @@ const ExpenseTrackingEmotionalAnalysis = () => {
               <div className="flex-1">
                 <div className="flex items-center space-x-4 mb-4">
                   <h1 className="text-2xl lg:text-3xl font-heading text-foreground">
-                    {culturalContext === 'hindi' ?'खर्च ट्रैकिंग और भावनात्मक विश्लेषण' :'Expense Tracking & Emotional Analysis'
+                    {culturalContext === 'hindi' ?'आय और खर्च ट्रैकिंग' :'Income & Expense Tracking'
                     }
                   </h1>
                 </div>
                 <p className="text-muted-foreground max-w-2xl">
-                  {culturalContext === 'hindi' ?'अपने खर्च को ट्रैक करें, भावनात्मक पैटर्न को समझें, और AI की मदद से बेहतर वित्तीय निर्णय लें।' :'Track your expenses, understand emotional patterns, and make better financial decisions with AI-powered insights.'
+                  {culturalContext === 'hindi' ?'अपनी आय और खर्च को ट्रैक करें, भावनात्मक पैटर्न को समझें, और AI की मदद से बेहतर वित्तीय निर्णय लें।' :'Track your income and expenses, understand emotional patterns, and make better financial decisions with AI-powered insights.'
                   }
                 </p>
               </div>
@@ -297,18 +326,27 @@ const ExpenseTrackingEmotionalAnalysis = () => {
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               {/* Left Column - Main Content */}
               <div className="xl:col-span-2 space-y-8">
-                {/* Quick Expense Entry */}
-                <QuickExpenseEntry
+                {/* Unified Financial Entry */}
+                <UnifiedFinancialEntry
+                  onAddIncome={handleAddIncome}
                   onAddExpense={handleAddExpense}
                   culturalContext={culturalContext}
                   emotionalState={emotionalState}
                 />
 
-                {/* Expense Timeline */}
-                <ExpenseTimeline
+                {/* Combined Financial Timeline */}
+                <CombinedFinancialTimeline
                   expenses={expenses}
+                  incomes={incomes}
                   culturalContext={culturalContext}
-                  onExpenseClick={handleExpenseClick}
+                  onExpenseClick={() => {}}
+                  onIncomeClick={() => {}}
+                  onDeleteExpense={() => {}}
+                  onDeleteIncome={() => {}}
+                  onEditExpense={() => {}}
+                  onEditIncome={() => {}}
+                  onDuplicateExpense={() => {}}
+                  onDuplicateIncome={() => {}}
                 />
               </div>
 
@@ -324,6 +362,7 @@ const ExpenseTrackingEmotionalAnalysis = () => {
                 {/* Emotional Analysis Panel */}
                 <EmotionalAnalysisPanel
                   expenses={expenses}
+                  incomes={incomes}
                   culturalContext={culturalContext}
                 />
               </div>
@@ -333,6 +372,7 @@ const ExpenseTrackingEmotionalAnalysis = () => {
             <div className="xl:hidden mt-8">
               <EmotionalAnalysisPanel
                 expenses={expenses}
+                incomes={incomes}
                 culturalContext={culturalContext}
               />
             </div>

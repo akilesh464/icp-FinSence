@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import Icon from '../../../components/AppIcon';
+import { chatService } from '../../../services/ChatService';
 
 const EmotionalStateSidebar = ({ 
   emotionalState = 'calm',
@@ -14,32 +15,22 @@ const EmotionalStateSidebar = ({
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
-    // Mock mood history data
-    const mockMoodHistory = [
-      { time: '6 AM', score: 6, state: 'calm' },
-      { time: '9 AM', score: 8, state: 'positive' },
-      { time: '12 PM', score: 5, state: 'stressed' },
-      { time: '3 PM', score: 4, state: 'stressed' },
-      { time: '6 PM', score: 7, state: 'calm' },
-      { time: '9 PM', score: 7, state: 'calm' }
-    ];
-    
-    setMoodHistory(mockMoodHistory);
-    
-    // Set current mood score based on emotional state
-    const stateScores = {
-      'positive': 8,
-      'calm': 7,
-      'stressed': 4,
-      'anxious': 3
-    };
-    setCurrentMoodScore(stateScores?.[emotionalState] || 7);
-    
-    // Set improvement suggestions based on current state
-    setImprovementSuggestions(getImprovementSuggestions());
-    
-    // Set stress factors
-    setStressFactors(getStressFactors());
+    (async () => {
+      // Pull last 24 hours of chat emotions and build series
+      const history = await chatService.getChatHistory().catch(() => []);
+      const last = history.slice(-12); // recent points
+      const moods = last.map(m => (m.emotion && m.emotion[0]) || 'neutral');
+      const toScore = (e) => e==='happy'||e==='excited'||e==='confident'||e==='hopeful' ? 8
+        : e==='calm'||e==='neutral' ? 7
+        : e==='stressed'||e==='anxious'||e==='frustrated'||e==='overwhelmed'||e==='angry' ? 4 : 6;
+      const series = moods.map((e, i) => ({ time: `${i+1}`, score: toScore(e), state: e }));
+      setMoodHistory(series.length ? series : [{ time: '1', score: 7, state: emotionalState }]);
+
+      // Current mood score from latest
+      setCurrentMoodScore(series.length ? series[series.length-1].score : 7);
+      setImprovementSuggestions(getImprovementSuggestions());
+      setStressFactors(getStressFactors());
+    })();
   }, [emotionalState, culturalContext]);
 
   const getImprovementSuggestions = () => {

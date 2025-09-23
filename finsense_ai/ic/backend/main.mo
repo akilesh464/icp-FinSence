@@ -5,6 +5,7 @@ import HashMap "mo:base/HashMap";
 import Iter "mo:base/Iter";
 import Buffer "mo:base/Buffer";
 import Time "mo:base/Time";
+import Debug "mo:base/Debug";
 
 actor class Finsense() = this {
 
@@ -41,6 +42,15 @@ actor class Finsense() = this {
     entities : [Text];
   };
 
+  public type Income = {
+    id : Nat;
+    amount : Nat;
+    source : Text;
+    description : ?Text;
+    date : Text;
+    emotion : Text;
+  };
+
   public type UserProfile = {
     name : ?Text;
     salary : ?Nat;
@@ -55,11 +65,13 @@ actor class Finsense() = this {
 
   // -------------------- STATE --------------------
   stable var nextExpenseId : Nat = 0;
+  stable var nextIncomeId : Nat = 0;
   stable var nextHoldingId : Nat = 0;
   stable var nextMessageId : Nat = 0;
   stable var nextChatId : Nat = 0;
 
   let expenses = HashMap.HashMap<Principal, [Expense]>(10, Principal.equal, Principal.hash);
+  let incomes = HashMap.HashMap<Principal, [Income]>(10, Principal.equal, Principal.hash);
   let holdings = HashMap.HashMap<Principal, [Holding]>(10, Principal.equal, Principal.hash);
   let therapy = HashMap.HashMap<Principal, [Message]>(10, Principal.equal, Principal.hash);
   let chatInteractions = HashMap.HashMap<Principal, [ChatInteraction]>(10, Principal.equal, Principal.hash);
@@ -109,6 +121,57 @@ actor class Finsense() = this {
           };
         };
         expenses.put(caller, Buffer.toArray(filtered));
+        return removed;
+      };
+      case null false;
+    }
+  };
+
+  // -------------------- INCOME --------------------
+  public func addIncome(amount : Nat, source : Text, description : ?Text, date : Text, emotion : Text) : async Income {
+    let caller = Principal.fromActor(this);
+    let i : Income = {
+      id = nextIncomeId;
+      amount = amount;
+      source = source;
+      description = description;
+      date = date;
+      emotion = emotion;
+    };
+    nextIncomeId += 1;
+
+    let curr = switch (incomes.get(caller)) {
+      case (?xs) Buffer.fromArray<Income>(xs);
+      case null Buffer.Buffer<Income>(0);
+    };
+    curr.add(i);
+    incomes.put(caller, Buffer.toArray(curr));
+    return i;
+  };
+
+  public query func getIncomes() : async [Income] {
+    let caller = Principal.fromActor(this);
+    switch (incomes.get(caller)) {
+      case (?xs) xs;
+      case null [];
+    }
+  };
+
+  public func removeIncome(id : Nat) : async Bool {
+    let caller = Principal.fromActor(this);
+    switch (incomes.get(caller)) {
+      case (?xs) {
+        let curr = Buffer.fromArray<Income>(xs);
+        let filtered = Buffer.Buffer<Income>(0);
+        var removed = false;
+        for (i in curr.vals()) {
+          if (i.id == id) {
+            removed := true;
+          } else {
+            filtered.add(i);
+          };
+        };
+        incomes.put(caller, Buffer.toArray(filtered));
         return removed;
       };
       case null false;
@@ -304,6 +367,7 @@ actor class Finsense() = this {
   public func deleteUserData() : async Bool {
     let caller = Principal.fromActor(this);
     expenses.delete(caller);
+    incomes.delete(caller);
     holdings.delete(caller);
     therapy.delete(caller);
     chatInteractions.delete(caller);
@@ -313,6 +377,7 @@ actor class Finsense() = this {
 
   public query func exportUserData() : async {
     expenses: [Expense];
+    incomes: [Income];
     holdings: [Holding];
     messages: [Message];
     chatInteractions: [ChatInteraction];
@@ -321,6 +386,7 @@ actor class Finsense() = this {
     let caller = Principal.fromActor(this);
     {
       expenses = switch (expenses.get(caller)) { case (?xs) xs; case null []; };
+      incomes = switch (incomes.get(caller)) { case (?xs) xs; case null []; };
       holdings = switch (holdings.get(caller)) { case (?xs) xs; case null []; };
       messages = switch (therapy.get(caller)) { case (?xs) xs; case null []; };
       chatInteractions = switch (chatInteractions.get(caller)) { case (?xs) xs; case null []; };
@@ -335,15 +401,35 @@ actor class Finsense() = this {
 
   public query func getCanisterInfo() : async {
     totalExpenses: Nat;
+    totalIncomes: Nat;
     totalHoldings: Nat;
     totalMessages: Nat;
     totalChatInteractions: Nat;
   } {
     {
       totalExpenses = nextExpenseId;
+      totalIncomes = nextIncomeId;
       totalHoldings = nextHoldingId;
       totalMessages = nextMessageId;
       totalChatInteractions = nextChatId;
     };
   };
 };
+
+actor FinSenseBackend {
+  
+  public query func greet(name : Text) : async Text {
+    "Hello, " # name # "! Welcome to FinSense AI."
+  };
+
+  public func getCurrentTime() : async Int {
+    Time.now()
+  };
+
+  public query func getAppInfo() : async {name: Text; version: Text} {
+    {
+      name = "FinSense AI";
+      version = "1.0.0";
+    }
+  };
+}
