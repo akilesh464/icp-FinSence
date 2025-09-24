@@ -166,13 +166,13 @@ Multilingual support → reach more diverse users
 
 Promote financial + mental wellness together
 
-Login and Main Dashboard
-
 -----------------------------------------------------------------------------------------------------------------------------
 
-FINSENCEBASE.png
+Login and Main Dashboard : 
 
-FINSENCEMAINDASHBOARD.png
+<img width="1918" height="930" alt="image" src="https://github.com/user-attachments/assets/dd14692f-fccf-4fe1-9b84-7556c19b40f6" />
+
+<img width="1918" height="933" alt="image" src="https://github.com/user-attachments/assets/3de3b4aa-0bfa-4b21-8823-0d16bf264de2" />
 
 -----------------------------------------------------------------------------------------------------------------------------
 
