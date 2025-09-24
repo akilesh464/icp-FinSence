@@ -7,6 +7,7 @@ DEMO VIDEO : https://youtu.be/3WlhZCtruDM
 
 PITCH VIDEO : https://youtu.be/noXlSb9I85A
 
+LIVE PROJECT : https://finsence.netlify.app
 
 -----------------------------------------------------------------------------------------------------------------------------
 📌 Project Proposition : 
