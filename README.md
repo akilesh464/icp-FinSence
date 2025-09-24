@@ -3,87 +3,100 @@
 
 An Emotionally-Aware Web3 Financial Companion.
 
-🎥 Demo Video: https://youtu.be/u3XUyCAO1TE
+DEMO VIDEO : https://youtu.be/3WlhZCtruDM
+
+PITCH VIDEO : https://youtu.be/noXlSb9I85A
+
 
 -----------------------------------------------------------------------------------------------------------------------------
 📌 Project Proposition : 
 
-FinSence AI goes beyond numbers. It’s a Web3-powered financial companion that blends personal finance, psychology, and culture into one platform.
+FinSence is an emotionally-aware Web3 financial companion that merges personal finance, psychology, and culture into one platform.
 
-Built on the Internet Computer (ICP), it leverages canisters for decentralized, secure storage and integrates AI to analyze emotional triggers, track expenses, and deliver culturally contextual insights.
+Built on the Internet Computer (ICP), it uses canisters for secure, decentralized storage and integrates AI to track expenses, analyze emotional triggers, and deliver culturally contextual insights.
 
-👉 The goal? To help people spend smarter, reduce financial stress, and make mindful money decisions — with privacy and transparency at the core.
+Our goal is to help users spend smarter, reduce stress, and make mindful financial decisions with ICP-powered transparency and privacy.
 
 -----------------------------------------------------------------------------------------------------------------------------
 
 ❗ Problem We’re Solving : 
 
-Most personal finance tools today fall short because they:
+Personal finance tools today are limited by:
 
- Focus only on numbers, ignoring the emotions and cultural factors driving financial decisions
+Focus only on numbers, ignoring emotions and cultural context behind financial decisions
 
- Rely on centralized servers, risking privacy and security
+Centralized storage of sensitive financial data → privacy & security risks
 
- Lack personalized therapy-like guidance for emotion-based spending
+Lack of personalized financial therapy or emotion-based spending guidance
 
- Fail to support underbanked communities with diverse languages and cultural needs
+Limited support for underbanked communities with diverse cultural and language needs
  
 -----------------------------------------------------------------------------------------------------------------------------
 🌟 Vision :
 
-We believe finance should not just be about numbers, but also about mental well-being and empowerment.
+We envision a future where finance is not just about numbers, but about mental well-being and empowerment.
 
-Imagine:
-
-  A student in India receives festival-aware financial advice, aligned with family priorities
-
-  Users own their financial data sovereignty through ICP, without centralized control
-
-  AI offers real-time emotional insights into spending habits and long-term goals
+A student in India sees financial advice adapted to local culture, festivals, and family priorities. ICP ensures financial data sovereignty, with no dependence on centralized servers. AI provides real-time insights into emotions, spending habits, and long-term goals
   
 -----------------------------------------------------------------------------------------------------------------------------
 
 💡 Our Solution : 
 
-  FinSence AI bridges the gap between finance and psychology by:
+FinSence AI bridges finance and psychology by:
 
-  Tracking expenses & detecting emotional triggers
+Tracking expenses & analyzing emotional triggers
 
-  Offering therapy-like AI guidance for healthier habits
+Delivering AI-powered therapy-like suggestions for healthier financial habits
 
-  Using ICP canisters for private, tamper-proof data storage
+Using ICP canisters for fully decentralized, private, and tamper-proof storage
 
-  Delivering multilingual, culturally-aware financial coaching
+Offering multilingual, culturally-aware financial guidance
+ 
+Integrating live portfolio tracking and smart savings nudges
 
-  Providing live portfolio tracking + smart savings nudges
-  
+-----------------------------------------------------------------------------------------------------------------------------
+
+Analytics & Traction Dashboard : 
+
+Admin dashboard for tracking user engagement:
+
+Daily Active Users
+
+Budgets Created
+
+Emotional Check-ins
+
+Tokens Earned
+
+Traction simulated for demo purposes using seeded analytics  
+
 -----------------------------------------------------------------------------------------------------------------------------
 
 🚀 Why This Matters :
 
- Emotional spending drives up to 40% of global purchases
+Emotional spending is a global issue, with studies showing up to 40% of purchases are mood-driven
 
- Traditional finance apps ignore mental health and culture
+Traditional finance apps ignore mental health & culture, creating incomplete solutions
 
- ICP ensures user-owned data, not controlled by corporations
+ICP integration ensures user data is owned by the individual, not corporations
 
- FinSence AI redefines financial wellness by merging AI, finance, and psychology
+By combining AI, finance, and psychology, FinSence AI redefines financial well-being
  
 -----------------------------------------------------------------------------------------------------------------------------
 
 🔑 Core Features :
 
-🛡 ICP Canister Backend → Decentralized, private, tamper-proof storage
+ICP Canister Backend: Fully decentralized financial + emotional data storage
 
- Emotion-Aware Spending Analysis → Detect mood-driven purchases + coping tips
+Emotion-Aware Spending Analysis: Detect mood-driven spending & provide coping strategies
 
- Cultural Context Engine → Festival-aware, family finance, multilingual support
+Cultural Context Engine: Localized advice for festivals, family finance, and multilingual users
 
- AI Financial Therapist → Conversational therapy + mindful decision coaching
+AI Financial Therapist: Conversational therapy + coaching for mindful decisions
 
- Portfolio & Net Worth Tracking → Real-time updates on ICP blockchain
+Portfolio & Net Worth Tracking: Real-time updates with smart insights with ICP Blockchain enabled
 
- Voice-Enabled Assistant → Natural-language queries for finance + wellness
+Voice-Enabled Assistant: Financial queries + emotional wellness in natural language
  
 -----------------------------------------------------------------------------------------------------------------------------
 
@@ -93,23 +106,74 @@ Frontend: React, Tailwind, Recharts
 
 Backend: ICP Canisters (Motoko)
 
-AI Layer: Gemini API (financial therapy chat)
+Identity: Internet Identity V2 (Web3-native authentication)
 
-Identity: Internet Identity (Web3-native authentication)
+Visualization: Recharts + analytics dashboard
 
-Visualization: Recharts + analytics dashboards
-
-Integrations: Voice, multilingual NLP, ICP features
+Integrations: Voice, multilingual NLP, and ICP features
 
 -----------------------------------------------------------------------------------------------------------------------------
 
-🌍 Potential Impact :
+Market Opportunity:
 
- Target Users: Students, young professionals, underbanked communities
+Cultural & emotional finance is underexplored but critical for personal wealth management.
 
- Multilingual Support: Accessibility for diverse cultural + language groups
+India alone has >1B transactions yearly around festivals and personal finances; gamification + insights can improve financial well-being.
 
- Holistic Wellness: Promote financial + mental well-being together
+ICP allows secure, scalable, and decentralized management of personal finance data.
 
 -----------------------------------------------------------------------------------------------------------------------------
-UNDER PROGRESS
+
+Impact : 
+
+Democratizes access to AI financial guidance
+
+Encourages saving, budgeting, and emotional intelligence
+
+Provides gamified engagement with measurable progress
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+Business Model & Scalability : 
+
+Freemium model: Basic features free; premium unlocks advanced AI insights and portfolio analytics
+
+Token rewards (FinCoins): Non-monetary in-app currency
+
+Referral system: Drives adoption & engagement
+
+Future monetization: Premium subscriptions, partner offers, personalized investment suggestions
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+Roadmap : 
+
+Expand AI capabilities for automated savings & investment recommendations
+
+Integrate real-world banking/UPI for reward redemption (non-crypto)
+
+Add social features for financial challenges among friends/family
+
+Enhance analytics for investor & admin reporting
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+Potential Impact : 
+
+Target users: students, young professionals, underbanked communities
+
+Multilingual support → reach more diverse users
+
+Promote financial + mental wellness together
+
+Login and Main Dashboard
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+FINSENCEBASE.png
+
+FINSENCEMAINDASHBOARD.png
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+Built by Team Zyphers❤️
